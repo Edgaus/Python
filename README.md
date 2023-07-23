@@ -1,2 +1,2 @@
-# Python-notes
-Respositoria donde hay notas y ejercicios del lenguaje Python, viniendo con las librerias a utilizar como pandas, numpy, scipy, skit-learn, etc.
+# Data Science Course - Class 2
+_This material is created for our [Data Science with Python Course](https://rmotr.com/data-science-python-course)_
