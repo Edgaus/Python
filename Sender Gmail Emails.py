@@ -15,9 +15,9 @@ import comtypes.client
 
 current_dir = os.getcwd() + '\Practica.xlsx'
 context = pd.read_excel(current_dir)
-context['Submitter_first_name'] = context['Submitter_first_name'].str.title()
-context['Submitter_last_name'] = context['Submitter_last_name'].str.title()
-context = context[ context['Value']=='Si' ].reset_index()
+context['name'] = context['Submitter_first_name'].str.title()
+context['name'] = context['Submitter_last_name'].str.title()
+
 
 # Setup port number and server name
 smtp_port = 587              # Standard secure SMTP port
@@ -26,11 +26,9 @@ smtp_server = "smtp.gmail.com"  # Google SMTP Server
 
 
 # Set up the email lists
-email_from1 = 'edgaus98@gmail.com'
-email_from = 'smctsm.letters.and.certificates@gmail.com'
+email_from = 'edgaus98@gmail.com'
 # Define the password (better to reference externally)
-pswd = 'ygttfkpjrmbegsfr'
-pswd1 = 'ywqbodbjvxvmxtqy' 
+pswd = 'ywqbodbjvxvmxtqy' 
 
 
 # Define the email function (dont call it email!)
@@ -63,7 +61,7 @@ def sender_html(person, filename,i,pdf_name):
     '''
 
     
-    with open('example.txt', 'r') as file:
+    with open('Datos\Sender Gmail Emails\example.txtexample.txt', 'r') as file:
         html_text = file.read()
 
     html_text +=f'<h3>Dear {first} {last}</h3>\n'
