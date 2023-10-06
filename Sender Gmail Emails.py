@@ -13,10 +13,10 @@ import comtypes.client
 
 
 
-current_dir = os.getcwd() + '\Practica.xlsx'
+current_dir = os.getcwd() + '\Datos\Sender Gmail Emails\Practica.xlsx'
 context = pd.read_excel(current_dir)
-context['name'] = context['Submitter_first_name'].str.title()
-context['name'] = context['Submitter_last_name'].str.title()
+context['Submitter_first_name'] = context['Submitter_first_name'].str.title()
+context['Submitter_last_name'] = context['Submitter_last_name'].str.title()
 
 
 # Setup port number and server name
@@ -61,7 +61,7 @@ def sender_html(person, filename,i,pdf_name):
     '''
 
     
-    with open('Datos\Sender Gmail Emails\example.txtexample.txt', 'r') as file:
+    with open('Datos\Sender Gmail Emails\example.txt', 'r') as file:
         html_text = file.read()
 
     html_text +=f'<h3>Dear {first} {last}</h3>\n'
@@ -120,18 +120,25 @@ for i in range( 0, context.shape[0] ):
 
 
 
-    person = extract['Submitter_first_name'] + extract['Submitter_last_name']
+    person = extract['Submitter_first_name'] + " " + extract['Submitter_last_name']
     receiver = extract['Submitter_email']
     Submission_Id = extract['Submission_Id']
 
-    version = 'Template.docx'
+    version = 'Datos\Sender Gmail Emails\Template.docx'
     doc = DocxTemplate(version)
     doc.render(extract)
-    doc.save(f'Documents_Generated\Word\Template Rendered {person}-{Submission_Id}.docx')
 
     # Set the paths for the Word and PDF files
-    word_path = f'Documents_Generated\Word\Template Rendered {person}-{Submission_Id}.docx'
-    pdf_path = f'Documents_Generated\PDF\Constance {person}-{Submission_Id}.pdf'
+    word_path = f'Datos\Sender Gmail Emails\Documents_Generated\Word\Template Rendered {person}-{Submission_Id}.docx'
+    pdf_path = f'Datos\Sender Gmail Emails\Documents_Generated\PDF\Constance {person}-{Submission_Id}.pdf'
+    pdf_name = f"Certificate Id-{Submission_Id}.pdf"
+
+
+    doc.save(word_path)
+
+    # Set the paths for the Word and PDF files
+    word_path = f'Datos\Sender Gmail Emails\Documents_Generated\Word\Template Rendered {person}-{Submission_Id}.docx'
+    pdf_path = f'Datos\Sender Gmail Emails\Documents_Generated\PDF\Constance {person}-{Submission_Id}.pdf'
     pdf_name = f"Certificate Id-{Submission_Id}.pdf"
  
     # Load the Word document using the docx library
