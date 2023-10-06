@@ -57,7 +57,7 @@ def sender_html(person, filename,i,pdf_name):
     On behalf of the Organizing Committee,
     Dr. Cristo Manuel Yee Rendón
     President of the SMCTSM
-    <img src=https://site.smctsm.org.mx/wp-content/uploads/2023/08/cropped-cropped-logoT-90x90.png>
+    <img src=https://site.smctsm.org.mx/wp-content/uploads/2023/08/cropped-cropped-logoT-90x90.png class='back'>
     '''
 
     
@@ -69,7 +69,7 @@ def sender_html(person, filename,i,pdf_name):
     for line in text.split('\n'):
         html_text += f'<p style="font-family: Arial, sans-serif; color: #555555; line-height: 1.6;">{line}</p>\n'
 
-    html_text += '</td>\n</tr>\n</table>\n</td>\n</tr>\n</table>\n</body>\n</html>\n'
+    html_text += '</td>\n</tr>\n</table>\n</td>\n</tr>\n</table>\n</td>\n</body>\n</html>\n'
 
     with open('html_text.html', 'w', encoding="utf-8") as file:
         file.write(html_text)
@@ -111,9 +111,9 @@ def sender_html(person, filename,i,pdf_name):
     # Close the port
     TIE_server.quit()
 
+limit = context.shape[0]
 
-
-for i in range( 0, context.shape[0] ):
+for i in range( 0, 2 ):
     
 
     extract = context.loc[i]
