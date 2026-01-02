@@ -14,7 +14,7 @@ import html as html_lib
 
 
 
-current_dir = os.getcwd() + '\Datos\Sender Gmail Emails\Trabajos.xlsx'
+current_dir = os.getcwd() + '\Datos\Sender Gmail Emails\Practica.xlsx'
 context = pd.read_excel(current_dir)
 context['Title'] = context['Title'].str.upper()
 context['Authors'] = context['Authors'].str.replace("-", " ").str.upper()
