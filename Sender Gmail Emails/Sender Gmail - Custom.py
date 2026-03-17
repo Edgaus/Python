@@ -110,7 +110,7 @@ def extraer_subcadena(cadena, caracter_inicio, caracter_fin):
 
 limit = context.shape[0]   
 
-for i in range(1,2):
+for i in range(142,limit):
     
     
     extract = context.loc[i]
