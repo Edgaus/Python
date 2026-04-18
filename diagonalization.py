@@ -1,10 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+
+
 def calcular_H_numerica(a, b, params):
     """Construye la matriz Hamiltoniana 3x3 para valores dados de alfa (a) y beta (b)."""
     e1, e2, e3 = params['e1'], params['e2'], params['e3']
-    t0, t11, t22, t12 = params['t0'], params['t11'], params['t22'], params['t12']
+    t0, t1, t11,t2, t22, t12 = params['t0'], params['t1'], params['t11'], params['t2'], params['t22'], params['t12']
     
     H = np.zeros((3, 3), dtype=complex)
     
@@ -13,16 +16,16 @@ def calcular_H_numerica(a, b, params):
     H[1, 1] = e2 + 2*t11*np.cos(2*a) + (t11 + 3*t22)*np.cos(a)*np.cos(b)
     H[2, 2] = e3 + 2*t22*np.cos(2*a) + (3*t11 + t22)*np.cos(a)*np.cos(b)
     
-    # Elementos fuera de la diagonal (H12 y su conjugado)
-    H[0, 1] = 4j*t12*np.sin(a)*(np.cos(a) - np.cos(b)) - np.sqrt(3)*np.sin(a)*np.sin(b)*(t11 - t22)
+    # Elementos fuera de la diagonal (H12 y su conjugado)  h1
+    H[0, 1] = -2*t2*np.sqrt(3)*np.sin(a)*np.sin(b) +2*1j*t1*(  np.sin(2*a) + np.sin(a)*np.cos(b) )    
     H[1, 0] = np.conj(H[0, 1])
     
-    # Elementos fuera de la diagonal (H13 y su conjugado)
-    H[0, 2] = -4*t12*np.sin(a)*np.sin(b) + 1j*np.sqrt(3)*np.cos(a)*np.sin(b)*(t11 - t22)
-    H[2, 0] = np.conj(H[0, 2])
+    # Elementos fuera de la diagonal (H13 y su conjugado) h2
+    H[0, 2] = 2*t2*(  np.cos(2*a) - np.cos(a)*np.cos(b)  ) + 2j*np.sqrt(3)*t1*np.cos(a)*np.sin(b)
+    H[2, 0] = np.conj(H[0, 2])  
     
-    # Elementos fuera de la diagonal (H23 y su conjugado)
-    H[1, 2] = np.sqrt(3)*np.sin(a)*np.sin(b)*(t11 - t22) - 1j*4*t12*np.cos(a)*np.sin(b)
+    # Elementos fuera de la diagonal (H23 y su conjugado) h12
+    H[1, 2] = np.sqrt(3 ) *( t22-t11 ) *np.sin(a)*np.sin(b) +4j*t12*np.sin(a)*( np.cos(a) - np.cos(b) )
     H[2, 1] = np.conj(H[1, 2])
     
     return H
@@ -30,30 +33,28 @@ def calcular_H_numerica(a, b, params):
 def plot_estructura_bandas():
     # 1. Parámetros físicos (Según tus notas)
     parametros = {
-        'e1': 0.0, 'e2': 1.0, 'e3': 1.0,  # Energías de sitio (e11, e22, e33)
-        't0': -1.2,                       # Salto t_0
-        't11': -0.52, 't22': 1.05,        # Saltos t_11 y t_22
-        't12': 0.5                        # Salto t_12
+        'e1': 1.046, 'e2': 2.104, 'e3': 2.104,  # Energías de sitio (e11, e22, e33)
+        't0': -0.184, 't1':0.401, 't2': 0.507,                         # Salto t_0
+        't11': 0.218,'t12': 0.338 , 't22': 0.057,        # Saltos t_11 y t_22
     }
     
     # 2. Definir los tramos del camino en el espacio k
-    N = 100 # Número de puntos por tramo
+    N = 1000 # Número de puntos por tramo
     
-    # Tramo 1: Gamma -> M
-    alpha_GM = np.zeros(N)
-    beta_GM = np.linspace(0, np.pi, N)
-    
-    # Tramo 2: M -> K
-    alpha_MK = np.linspace(0, np.pi/3, N)
-    beta_MK = np.full(N, np.pi)
-    
-    # Tramo 3: K -> Gamma
-    alpha_KG = np.linspace(np.pi/3, 0, N)
-    beta_KG = np.linspace(np.pi, 0, N)
+    # Tramo 1: Gamma -> K
+
+    alpha_GK = np.linspace(0, 2*np.pi/(3), N)
+    beta_GK = np.zeros(N) 
+
+    # Tramo 1: K -> M
+
+    alpha_KM = np.linspace(0, 2*np.pi/(3), N)
+    beta_KM = np.zeros(N) 
+
     
     # Concatenar todos los tramos en un solo arreglo continuo
-    alpha_vals = np.concatenate([alpha_GM, alpha_MK, alpha_KG])
-    beta_vals = np.concatenate([beta_GM, beta_MK, beta_KG])
+    alpha_vals = np.concatenate([alpha_GK, alpha_KM])
+    beta_vals = np.concatenate([beta_GK, beta_KM])
     
     # 3. Calcular eigenvalores a lo largo del camino
     bandas = []
@@ -68,7 +69,7 @@ def plot_estructura_bandas():
     x_vals = np.arange(len(alpha_vals))
     # Posiciones donde ocurren los puntos de alta simetría
     puntos_simetria = [0, N-1, 2*N-1, 3*N-1]
-    etiquetas_simetria = [r'$\Gamma$', r'$M$', r'$K$', r'$\Gamma$']
+    etiquetas_simetria = [r'$\Gamma$', r'$K$', r'$M$', r'$\Gamma$']
     
     # 4. Graficar
     plt.figure(figsize=(9, 6))

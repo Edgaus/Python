@@ -160,4 +160,4 @@ for i in range( 0, 2 ):
     word.Quit()
 
     # Run the function
-    sender_html(extract,pdf_path,i,pdf_name)
+    #sender_html(extract,pdf_path,i,pdf_name)
