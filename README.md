@@ -1,2 +1,2 @@
-# Data Science Course - Class 2
-_This material is created for our [Data Science with Python Course](https://rmotr.com/data-science-python-course)_
+# Yi there
+This repository is set of files written on python that are solution to particular problems
