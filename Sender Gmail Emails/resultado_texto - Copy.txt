@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.5" />
+    <meta charset="UTF-8" />
+    <title>Invitación Capítulo Estudiantil</title>
+</head>
+
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+
+    <table width="100%" cellpadding="10" cellspacing="0" style="background-color:#f4f4f4;">
+        <tr>
+            <td align="center">
+
+                <table width="400" cellpadding="0" cellspacing="0" style="background-color:#ffffff; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+                    <tr>
+    <td style="background-color:#65829e; padding:30px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+                <td align="center">
+                    <img src="https://github.com/Edgaus/Images-SVG/blob/main/qer.png?raw=true" 
+                         height="90" 
+                         alt="Capítulo Estudiantil" 
+                         style="display:inline-block; max-height:90px; width:auto;" />
+                    <div style="color:#ffffff; font-size:42px; font-weight:800; font-style:italic; line-height:1.2; margin-bottom:15px;">
+                        HOLA!
+                    </div>
+
+                </td>
+            </tr>
+        </table>
+    </td>
+</tr>
+                    <tr>
+                        <td align="center" style="padding:25px 20px 5px; font-style:italic; font-weight:bold; font-size:26px; color:#163a5f;"> 
+                            MARCO ANTONIO RAMÍREZ OROZCO
+                        </td>
+                    </tr>
+
+<tr>
+    <td align="center" style="padding:0 30px 20px;">
+        <div style="font-size:15px; color:#444444; line-height:1.5;">
+            
+            <div style="margin-bottom: 10px;">
+                <span style="font-size: 18px; color: #163a5f; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+                    Curso de Fotoluminiscencia de Nanomateriales
+                </span>
+            </div>
+
+            <p style="margin:5px 0;">Impartido por el <strong>Dr. Frank Güell</strong></p>
+            <p style="margin:2px 0; font-size:13px; color:#666666;">Universidad de Barcelona</p>
+            <p style="margin:10px 0 5px; font-weight:bold; color:#65829e;">UPIITA-IPN, CDMX • 9 al 13 de febrero de 2026</p>
+            
+            <div style="display:inline-block; margin-top:8px; padding:4px 12px; background-color:#f0f4f7; border-radius:15px; font-size:12px; color:#163a5f; border:1px solid #d1dce5;">
+                <strong>Duración:</strong> 10 horas lectivas
+            </div>
+        </div>
+    </td>
+</tr>
+                    <tr>
+    <td align="center" style="padding:15px 40px; border-top: 1px solid #eeeeee;">
+        <div style="font-size:16px; color:#163a5f; font-weight:bold; margin-bottom:10px;">
+            ¡Felicidades por tu excelente participación!
+        </div>
+        <div style="font-size:14px; color:#444444; line-height:1.5;">
+            Reconocemos tu valiosa asistencia durante las <strong>10 horas</strong> del curso impartido en el <strong>UPIITA-IPN</strong>. Tu compromiso con la excelencia académica es un ejemplo para nuestro capítulo estudiantil.
+        </div>
+    </td>
+</tr>
+                    <tr>
+    <td align="center" style="background-color:#163a5f; padding:25px 20px;">
+        <div style="color:#ffffff; font-size:13px; line-height:1.4;">
+            <p style="margin:0 0 15px;">Asimismo, la Sociedad Mexicana de Ciencia y Tecnología de Superficies y Materiales te invita al:</p>
+            
+            <div style="margin-bottom: 20px;">
+                <img src="https://raw.githubusercontent.com/Edgaus/Images-SVG/refs/heads/main/merida_add.jpeg" 
+                     width="340" 
+                     alt="Mérida, Yucatán" 
+                     style="display:block; border-radius:8px; border:2px solid #65829e; width:100%; max-width:340px; height:auto;" />
+            </div>
+
+            <p style="margin:0; font-weight:bold; font-size:15px; color:#F1C40F;">XIX International Conference on Surfaces, Materials and Vacuum</p>
+            <p style="margin:5px 0; font-weight:bold; color:#FFFFFF;">(XIX-ICSMV)</p>
+            <p style="margin:5px 0; color:#00D4FF; font-weight:bold;">Mérida, Yucatán • 21 al 25 de septiembre 2026</p>
+            <p style="margin:15px 0 0; font-style:italic; opacity:0.9;">Será un placer contar con tu presencia.</p>
+        </div>
+    </td>
+</tr>
+                    <tr>
+                        <td align="center" style="padding:15px 11px;">
+                            <div style="font-size:10px;color:#999999; line-height:1.4;">
+                                <p style="margin:2px 0;">Av. Instituto Politécnico Nacional 2508, Mexico City, Mexico</p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr style="background-color:#65829e;">
+                        <td align="center" style="padding:10px 8px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                                <tr>
+                                    <td align="center" style="padding:0 10px;">
+                                        <a href="https://www.facebook.com/profile.php?id=61583545131508&sk=followers">
+                                            <img src="https://github.com/Edgaus/Images-SVG/raw/main/facebook.png?raw=true" height="25" style="display:block;" alt="Facebook">
+                                        </a>
+                                    </td>
+                                    <td align="center" style="padding:0 10px;">
+                                        <a href="https://site.smctsm.org.mx/jovenes-investigadores/">
+                                            <img src="https://github.com/Edgaus/Images-SVG/raw/main/SMCTSM.png?raw=true" height="25" style="display:block;" alt="Website">
+                                        </a>
+                                    </td>
+                                    <td align="center" style="padding:0 10px;">
+                                        <a href="https://www.google.com/maps/dir/24.7875568,-107.4122464/19.50887,-99.12632/">
+                                            <img src="https://github.com/Edgaus/Images-SVG/raw/main/Maps.png?raw=true" height="25" style="display:block;" alt="Location">
+                                        </a>
+                                    </td>
+                                    <td align="center" style="padding:0 10px;">
+                                        <a href="mailto:contacto@smctsm.org.mx">
+                                            <img src="https://github.com/Edgaus/Images-SVG/raw/main/Mail.png?raw=true" height="25" style="display:block;" alt="Email">
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table> </td>
+        </tr>
+    </table>
+
+</body>
+</html>
