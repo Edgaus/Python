@@ -14,8 +14,8 @@ import html as html_lib
 
 
 
-current_dir = os.getcwd() + '\Datos\Test.xlsx'
-context = pd.read_excel(current_dir)
+current_dir = os.getcwd() 
+context = pd.read_excel(current_dir+ '\Datos\Test.xlsx')
 context['Title'] = context['Title'].str.upper()
 context['Authors'] = context['Authors'].str.replace("-", " ").str.upper()
 context['autor_todos'] = context['autor_todos'].str.replace("-", " ").str.upper()
@@ -31,9 +31,9 @@ smtp_server = "smtp.gmail.com"  # Google SMTP Server
 
 
 # Set up the email lists
-email_from = 'edgaus98@gmail.com'
+email_from = 'edgaragustin.fcfm@uas.edu.mx'
 # Define the password (better to reference externally)
-pswd = 'ywqbodbjvxvmxtqy' 
+pswd = 'evpzwaersahdmjyo' 
 
 # Define the email function (dont call it email!)
 
@@ -112,27 +112,27 @@ for i in range( 1 ):
 
     extract = context.loc[i]
 
-    authors_email= extract['email']
+    # Splits the string at the comma into a proper list
+    authors_email = [email.strip() for email in extract['email'].split(',')]
     Submission_Id = extract['Submission_Id']
         
 
 
-
-    version = 'Datos\Sender Gmail Emails\Template.docx'
+    version = current_dir + '\Datos\Template.docx'
     doc = DocxTemplate(version)
     doc.render(extract)
-
+  
     # Set the paths for the Word and PDF files
-    word_path = f'Datos\Sender Gmail Emails\Documents_Generated\Word\Acceptance Letter-{Submission_Id}.docx'
-    pdf_path = f'Datos\Sender Gmail Emails\Documents_Generated\PDF\Acceptance Letter-{Submission_Id}.pdf'
+    word_path = current_dir + f'\Documents_Generated\Word\Acceptance Letter-{Submission_Id}.docx'
+    pdf_path = current_dir + f'\Documents_Generated\PDF\Acceptance Letter-{Submission_Id}.pdf'
     pdf_name = f"Certificate Id-{Submission_Id}.pdf"
 
 
     doc.save(word_path)
 
     # Set the paths for the Word and PDF files
-    word_path = f'Datos\Sender Gmail Emails\Documents_Generated\Word\Acceptance Letter-{Submission_Id}.docx'
-    pdf_path = f'Datos\Sender Gmail Emails\Documents_Generated\PDF\Acceptance Letter-{Submission_Id}.pdf'
+    word_path = current_dir + f'\Documents_Generated\Word\Acceptance Letter-{Submission_Id}.docx'
+    pdf_path = current_dir + f'\Documents_Generated\PDF\Acceptance Letter-{Submission_Id}.pdf'
     pdf_name = f"Certificate Id-{Submission_Id}.pdf"
  
     # Load the Word document using the docx library
@@ -154,8 +154,8 @@ for i in range( 1 ):
     word.Quit()
 
 
-    version = 'Datos\Sender Gmail Emails\html.docx'
-    version_SAVE = 'Datos\Sender Gmail Emails\html_SAVE.docx'
+    version = current_dir + '\Datos\html.docx'
+    version_SAVE = current_dir + '\Datos\html_SAVE.docx'
 
     doc = DocxTemplate(version)
     doc.render(extract)
@@ -163,7 +163,7 @@ for i in range( 1 ):
 
     word.Quit()
     
-    doc = docx.Document("Data\Sender Gmail Emails\html_SAVE.docx")
+    doc = docx.Document(current_dir + "\Datos\html_SAVE.docx")
     
     with open("file.txt", "w", encoding="utf-8") as f:
         for p in doc.paragraphs:

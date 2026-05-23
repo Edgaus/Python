@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=0.5" />
     <meta charset="UTF-8" />
-    <title>InvitaciÃ³n CapÃ­tulo Estudiantil</title>
+    <title>Invitación Capítulo Estudiantil</title>
 </head>
 
 <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
@@ -23,7 +23,7 @@
                 <td align="center">
                     <img src="https://github.com/Edgaus/Images-SVG/blob/main/qer.png?raw=true" 
                          height="90" 
-                         alt="CapÃ­tulo Estudiantil" 
+                         alt="Capítulo Estudiantil" 
                          style="display:inline-block; max-height:90px; width:auto;" />
                     <div style="color:#ffffff; font-size:42px; font-weight:800; font-style:italic; line-height:1.2; margin-bottom:15px;">
                         HOLA!
@@ -50,12 +50,12 @@
                 </span>
             </div>
 
-            <p style="margin:5px 0;">Impartido por el <strong>Dr. Frank GÃ¼ell</strong></p>
+            <p style="margin:5px 0;">Impartido por el <strong>Dr. Frank Güell</strong></p>
             <p style="margin:2px 0; font-size:13px; color:#666666;">Universidad de Barcelona</p>
-            <p style="margin:10px 0 5px; font-weight:bold; color:#65829e;">UPIITA-IPN, CDMX â€¢ 9 al 13 de febrero de 2026</p>
+            <p style="margin:10px 0 5px; font-weight:bold; color:#65829e;">UPIITA-IPN, CDMX • 9 al 13 de febrero de 2026</p>
             
             <div style="display:inline-block; margin-top:8px; padding:4px 12px; background-color:#f0f4f7; border-radius:15px; font-size:12px; color:#163a5f; border:1px solid #d1dce5;">
-                <strong>DuraciÃ³n:</strong> 10 horas lectivas
+                <strong>Duración:</strong> 10 horas lectivas
             </div>
         </div>
     </td>
@@ -63,36 +63,36 @@
                     <tr>
     <td align="center" style="padding:15px 40px; border-top: 1px solid #eeeeee;">
         <div style="font-size:16px; color:#163a5f; font-weight:bold; margin-bottom:10px;">
-            Â¡Felicidades por tu excelente participaciÃ³n!
+            ¡Felicidades por tu excelente participación!
         </div>
         <div style="font-size:14px; color:#444444; line-height:1.5;">
-            Reconocemos tu valiosa asistencia durante las <strong>10 horas</strong> del curso impartido en el <strong>UPIITA-IPN</strong>. Tu compromiso con la excelencia acadÃ©mica es un ejemplo para nuestro capÃ­tulo estudiantil.
+            Reconocemos tu valiosa asistencia durante las <strong>10 horas</strong> del curso impartido en el <strong>UPIITA-IPN</strong>. Tu compromiso con la excelencia académica es un ejemplo para nuestro capítulo estudiantil.
         </div>
     </td>
 </tr>
                     <tr>
     <td align="center" style="background-color:#163a5f; padding:25px 20px;">
         <div style="color:#ffffff; font-size:13px; line-height:1.4;">
-            <p style="margin:0 0 15px;">Asimismo, la Sociedad Mexicana de Ciencia y TecnologÃ­a de Superficies y Materiales te invita al:</p>
+            <p style="margin:0 0 15px;">Asimismo, la Sociedad Mexicana de Ciencia y Tecnología de Superficies y Materiales te invita al:</p>
             
             <div style="margin-bottom: 20px;">
                 <img src="https://raw.githubusercontent.com/Edgaus/Images-SVG/refs/heads/main/merida_add.jpeg" 
                      width="340" 
-                     alt="MÃ©rida, YucatÃ¡n" 
+                     alt="Mérida, Yucatán" 
                      style="display:block; border-radius:8px; border:2px solid #65829e; width:100%; max-width:340px; height:auto;" />
             </div>
 
             <p style="margin:0; font-weight:bold; font-size:15px; color:#F1C40F;">XIX International Conference on Surfaces, Materials and Vacuum</p>
             <p style="margin:5px 0; font-weight:bold; color:#FFFFFF;">(XIX-ICSMV)</p>
-            <p style="margin:5px 0; color:#00D4FF; font-weight:bold;">MÃ©rida, YucatÃ¡n â€¢ 21 al 25 de septiembre 2026</p>
-            <p style="margin:15px 0 0; font-style:italic; opacity:0.9;">SerÃ¡ un placer contar con tu presencia.</p>
+            <p style="margin:5px 0; color:#00D4FF; font-weight:bold;">Mérida, Yucatán • 21 al 25 de septiembre 2026</p>
+            <p style="margin:15px 0 0; font-style:italic; opacity:0.9;">Será un placer contar con tu presencia.</p>
         </div>
     </td>
 </tr>
                     <tr>
                         <td align="center" style="padding:15px 11px;">
                             <div style="font-size:10px;color:#999999; line-height:1.4;">
-                                <p style="margin:2px 0;">Av. Instituto PolitÃ©cnico Nacional 2508, Mexico City, Mexico</p>
+                                <p style="margin:2px 0;">Av. Instituto Politécnico Nacional 2508, Mexico City, Mexico</p>
                             </div>
                         </td>
                     </tr>
