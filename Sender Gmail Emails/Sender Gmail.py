@@ -14,7 +14,7 @@ import html as html_lib
 
 
 
-current_dir = os.getcwd() + '\Datos\Asis_curso - Copy.xlsx'
+current_dir = os.getcwd() + '\Datos\Test.xlsx'
 context = pd.read_excel(current_dir)
 context['Title'] = context['Title'].str.upper()
 context['Authors'] = context['Authors'].str.replace("-", " ").str.upper()
@@ -112,8 +112,8 @@ for i in range( 1 ):
 
     extract = context.loc[i]
 
-    authors_email= ['edgaus98@gmail.com']
-    Submission_Id = extract['Id']
+    authors_email= extract['email']
+    Submission_Id = extract['Submission_Id']
         
 
 
@@ -163,7 +163,7 @@ for i in range( 1 ):
 
     word.Quit()
     
-    doc = docx.Document("Datos\Sender Gmail Emails\html_SAVE.docx")
+    doc = docx.Document("Data\Sender Gmail Emails\html_SAVE.docx")
     
     with open("file.txt", "w", encoding="utf-8") as f:
         for p in doc.paragraphs:
