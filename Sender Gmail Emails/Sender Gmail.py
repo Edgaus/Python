@@ -24,9 +24,11 @@ limit = context.shape[0]
 
 # Configuración del servidor (Cuenta institucional en Google Workspace)
 smtp_port = 587              
-smtp_server = "smtp.gmail.com"  
-email_from = 'edgaragustin.fcfm@uas.edu.mx'
-pswd = 'evpzwaersahdmjyo' # Contraseña de aplicación
+# Set up the email lists
+email_from = 'edgaus98@gmail.com'
+# Define the password (better to reference externally)
+pswd = 'ywqbodbjvxvmxtqy' 
+
 
 # Función principal de envío
 def sender_html(person, filename, i, pdf_name, mails, html_file_path):
@@ -37,7 +39,7 @@ def sender_html(person, filename, i, pdf_name, mails, html_file_path):
         msg = MIMEMultipart("mixed")
         msg['From'] = f'Sociedad Mexicana de Ciencia y Tecnología <{email_from}>'
         msg['To'] = mail
-        msg['Subject'] = "Certificate of contribution at the XIX-International Conference on Surfaces Materials and Vacuum"
+        msg['Subject'] = "Invitación a la 2da Parte del Curso: Fotoluminiscencia de Nanomateriales" 
 
         # 2. Sub-contenedor para Texto y HTML
         body_multipart = MIMEMultipart("alternative")
@@ -48,15 +50,14 @@ def sender_html(person, filename, i, pdf_name, mails, html_file_path):
         Estimado/a {Name},
 
         La Mesa Directiva del Capítulo Estudiantil y la Sociedad Mexicana de Ciencia y Tecnología 
-        de Superficies y Materiales A.C. agradecen su participación.
+        de Superficies y Materiales A.C.
 
-        Adjunto a este correo encontrará su certificado de contribución para la 
-        XIX International Conference on Surfaces, Materials and Vacuum (XIX-ICSMV).
+        Les hace la mas cordial invitación a la segunda parte del curso de fotolomusicencia de nanomateriales importido por el Dr. Frank Güell de la Universidad de Barceñlona del 01 AL 05 de Junio, 2026 de 9:30 a 12:00 hrs en UPIITA-IPN
 
         Saludos cordiales,
         Comité Organizador
         """
-        parte_texto = MIMEText(texto_plano, 'plain', 'utf-8')
+        parte_texto = MIMEText(texto_plano, 'plain', 'utf-8') 
 
         # 4. Versión HTML (Para la vista del usuario)
         with open(html_file_path, 'r', encoding="utf-8") as file:
