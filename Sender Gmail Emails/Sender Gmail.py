@@ -24,6 +24,7 @@ limit = context.shape[0]
 
 # Configuración del servidor (Cuenta institucional en Google Workspace)
 smtp_port = 587              
+smtp_server = "smtp.gmail.com"           
 # Set up the email lists
 email_from = 'edgaus98@gmail.com'
 # Define the password (better to reference externally)
