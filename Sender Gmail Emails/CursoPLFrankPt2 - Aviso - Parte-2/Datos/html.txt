@@ -4,7 +4,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=0.5" />
-    <title>Recordatorio Curso Parte 2 - Cambio de Sede</title>
+    <title>Recordatorio Curso Parte 2 - Nuevo Cambio de Sede</title>
 </head>
 <body style="margin:0;padding:0;background-color:#E9ECEF;font-family:Arial,Helvetica,sans-serif;">
     <table width="100%" cellpadding="10" cellspacing="0" style="background-color:#E9ECEF;">
@@ -24,21 +24,50 @@
                     <tr>
                         <td align="center" style="padding:25px 25px 20px;">
                             <div style="font-size:16px; color:#D32F2F; font-weight:bold; margin-bottom:12px; text-transform:uppercase;">
-                                ¡Aviso Importante: Cambio de Sede!
-                            </div>
-                            <div style="font-size:14px; color:#444444; line-height:1.5; margin-bottom:15px;">
-                                Te esperamos la próxima semana para la <strong>Parte 2</strong> del Curso de Fotoluminiscencia de Nanomateriales, impartido por el <strong>Dr. Frank Güell</strong>. Por motivos de logística, <strong>la ubicación del curso ha cambiado</strong>. ¡Toma nota de nuestra nueva sede!
+                                ¡Aviso Importante: Nuevo Cambio de Sede!
                             </div>
                             
-                            <div style="background-color:#FFF3CD; border-left:4px solid #FFC107; padding:12px; font-size:13px; color:#333333; text-align:left; line-height:1.5; margin-bottom:20px;">
-                                📍 <strong>Nueva Sede:</strong> Aula 104, UPIITA-IPN <span style="font-size:11px; color:#666666;">(Antes Auditorio)</span><br>
+                            <!-- Nuevo texto integrado -->
+                            <div style="font-size:14px; color:#444444; line-height:1.5; margin-bottom:15px; text-align:left;">
+                                                               
+                                Debido a la situación actual en la UPIITA, las sesiones presenciales se llevarán a cabo en la <strong>ESIME Zacatenco</strong>, específicamente en el <strong>Auditorio 4</strong>. Asimismo, les informamos que ya se cuenta con la notificación correspondiente ante las autoridades de la ESIME para la realización de esta actividad académica.
+                                <br><br>
+                                <strong>Sobre el acceso a las instalaciones:</strong>
+                                <ul style="margin-top: 8px; margin-bottom: 8px; padding-left: 20px;">
+                                    <li>Para quienes ya cuentan con <strong>gafete del evento</strong>, será importante portarlo para facilitar el acceso.</li>
+                                    <li>De igual manera, quienes cuenten con <strong>credencial del IPN</strong> no tendrán inconveniente para ingresar a las instalaciones.</li>
+                                    <li>En el caso de <strong>asistentes externos al IPN</strong>, podrán utilizar el gafete del curso o bien mostrar el cartel adjunto a este correo, mencionando que el evento se realiza con apoyo de la Ingeniería Fotónica.</li>
+                                </ul>
+                                
+                                Les recomendamos llegar alrededor de las <strong>9:30 a.m.</strong> para contar con tiempo suficiente en caso de cualquier situación relacionada con el acceso o para ubicar el auditorio con mayor facilidad.
+                            </div>
+                            
+                            <!-- Caja de información de sede -->
+                            <div style="background-color:#FFF3CD; border-left:4px solid #FFC107; padding:12px; font-size:13px; color:#333333; text-align:left; line-height:1.5; margin-bottom:15px;">
+                                📍 <strong>Nueva Sede:</strong> Auditorio 4 de la ESIME ZACATENCO<br>
+                                🏢 <span style="font-size:12px; color:#555555;">(Ubicado en la planta baja del Edificio 4)</span><br>
                                 📅 <strong>Fecha:</strong> 01 al 05 de Junio, 2026<br>
-                                ⏰ <strong>Horario:</strong> 10:00 a 12:00 hrs
+                                ⏰ <strong>Horario de inicio:</strong> 10:00 a 12:00 hrs <span style="font-size:11px; color:#666666;">(Llegar 9:30 a.m.)</span>
                             </div>
 
-                            <div style="margin-top: 15px; margin-bottom: 5px;">
+                            <!-- Sección del Croquis -->
+                            <div style="margin-bottom: 25px;">
+                                <div style="font-size:13px; color:#003366; font-weight:bold; margin-bottom:8px;">
+                                    Ruta y Croquis:
+                                </div>
+                                <!-- Enlace actualizado con la nueva ruta -->
+                                <a href="https://www.google.com/maps/dir/19.5096982,-99.1293098/Edificio+4+ESIME+Zacatenco,+Av+Instituto+Polit%C3%A9cnico+Nacional+s%2Fn-Edificio+7,+Lindavista,+Gustavo+A.+Madero,+07700+Ciudad+de+M%C3%A9xico,+CDMX/@19.5002099,-99.1389217,15z/data=!4m10!4m9!1m1!4e1!1m5!1m1!1s0x85d1f9b0ab35cff7:0xbfc4c9429c74ff22!2m2!1d-99.1352626!2d19.4995658!3e3?entry=ttu&g_ep=EgoyMDI2MDUzMS4wIKXMDSoASAFQAw%3D%3D" target="_blank">
+                                    <img src="https://github.com/Edgaus/Images-SVG/blob/main/croquis_esime.png?raw=true" alt="Croquis Edificio 4 ESIME Zacatenco" style="display:inline-block; border-radius:6px; border:1px solid #CCCCCC; width:100%; max-width:280px;" />
+                                </a>
+                                <div style="font-size:11px; color:#666666; margin-top:5px;">
+                                    Haz clic en el mapa para ver la ruta en Google Maps 👆
+                                </div>
+                            </div>
+
+                            <!-- Botón de Registro Modificado para ser más visible -->
+                            <div style="margin-top: 25px; margin-bottom: 10px;">
                                 <a href="https://site.smctsm.org.mx/jovenes-investigadores/fotoluminiscencia-de-nanomateriales/registro" 
-                                   style="background-color:#00D4FF; color:#003366; font-weight:bold; text-decoration:none; padding:12px 30px; border-radius:5px; display:inline-block; font-size:14px; text-transform:uppercase; letter-spacing:1px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                                   style="background-color:#00D4FF; color:#003366; font-weight:900; text-decoration:none; padding:16px 35px; border-radius:8px; display:inline-block; font-size:16px; text-transform:uppercase; letter-spacing:1px; box-shadow: 0 4px 10px rgba(0,0,0,0.25); border: 2px solid #003366;">
                                     Completa tu Registro Aquí
                                 </a>
                             </div>
@@ -47,7 +76,7 @@
 
                     <tr>
                         <td align="center" style="background-color:#0A2540; padding:25px 20px;">
-                            <img src="https://github.com/Edgaus/Images-SVG/blob/main/Poster%20Frank%20Guell%20Pt%202.png?raw=true" width="320" alt="Póster del Curso" style="display:block; border-radius:8px; border:1px solid #4A5568; width:100%; max-width:320px;" />
+                            <img src="https://github.com/Edgaus/Images-SVG/blob/main/NUEVO%20POSTER.jpg?raw=true" width="320" alt="Póster del Curso" style="display:block; border-radius:8px; border:1px solid #4A5568; width:100%; max-width:320px;" />
                         </td>
                     </tr>
 
@@ -60,7 +89,8 @@
                                 <tr>
                                     <td align="center" style="padding:0 8px;"><a href="https://www.facebook.com/profile.php?id=61583545131508&sk=followers"><img src="https://github.com/Edgaus/Images-SVG/raw/main/facebook.png?raw=true" height="22" style="display:block;" alt="Facebook"></a></td>
                                     <td align="center" style="padding:0 8px;"><a href="https://site.smctsm.org.mx/jovenes-investigadores/"><img src="https://github.com/Edgaus/Images-SVG/raw/main/SMCTSM.png?raw=true" height="22" style="display:block;" alt="Website"></a></td>
-                                    <td align="center" style="padding:0 8px;"><a href="https://www.google.com/maps/dir/24.7875568,-107.4122464/19.50887,-99.12632/"><img src="https://github.com/Edgaus/Images-SVG/raw/main/Maps.png?raw=true" height="22" style="display:block;" alt="Location"></a></td>
+                                    <!-- Ícono inferior actualizado con la nueva ruta -->
+                                    <td align="center" style="padding:0 8px;"><a href="https://www.google.com/maps/dir/19.5096982,-99.1293098/Edificio+4+ESIME+Zacatenco,+Av+Instituto+Polit%C3%A9cnico+Nacional+s%2Fn-Edificio+7,+Lindavista,+Gustavo+A.+Madero,+07700+Ciudad+de+M%C3%A9xico,+CDMX/@19.5002099,-99.1389217,15z/data=!4m10!4m9!1m1!4e1!1m5!1m1!1s0x85d1f9b0ab35cff7:0xbfc4c9429c74ff22!2m2!1d-99.1352626!2d19.4995658!3e3?entry=ttu&g_ep=EgoyMDI2MDUzMS4wIKXMDSoASAFQAw%3D%3D"><img src="https://github.com/Edgaus/Images-SVG/raw/main/Maps.png?raw=true" height="22" style="display:block;" alt="Location"></a></td>
                                     <td align="center" style="padding:0 8px;"><a href="mailto:contacto@smctsm.org.mx"><img src="https://github.com/Edgaus/Images-SVG/raw/main/Mail.png?raw=true" height="22" style="display:block;" alt="Email"></a></td>
                                 </tr>
                             </table>
