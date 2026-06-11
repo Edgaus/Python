@@ -4,7 +4,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=0.5" />
-    <title>Recordatorio Curso Parte 2 - Cambio de Sede</title>
+    <title>Recordatorio Curso Parte 2</title>
 </head>
 <body style="margin:0;padding:0;background-color:#E9ECEF;font-family:Arial,Helvetica,sans-serif;">
     <table width="100%" cellpadding="10" cellspacing="0" style="background-color:#E9ECEF;">
@@ -23,17 +23,17 @@
 
                     <tr>
                         <td align="center" style="padding:25px 25px 20px;">
-                            <div style="font-size:16px; color:#D32F2F; font-weight:bold; margin-bottom:12px; text-transform:uppercase;">
-                                ¡Aviso Importante: Cambio de Sede!
+                            <div style="font-size:16px; color:#003366; font-weight:bold; margin-bottom:12px; text-transform:uppercase;">
+                                ¡Falta muy poco!
                             </div>
                             <div style="font-size:14px; color:#444444; line-height:1.5; margin-bottom:15px;">
-                                Te esperamos la próxima semana para la <strong>Parte 2</strong> del Curso de Fotoluminiscencia de Nanomateriales, impartido por el <strong>Dr. Frank Güell</strong>. Por motivos de logística, <strong>la ubicación del curso ha cambiado</strong>. ¡Toma nota de nuestra nueva sede!
+                                Te esperamos la próxima semana para la <strong>Parte 2</strong> del Curso de Fotoluminiscencia de Nanomateriales, impartido por el <strong>Dr. Frank Güell</strong>. ¡Ahora más fotoluminiscente que nunca!
                             </div>
                             
-                            <div style="background-color:#FFF3CD; border-left:4px solid #FFC107; padding:12px; font-size:13px; color:#333333; text-align:left; line-height:1.5; margin-bottom:20px;">
-                                📍 <strong>Nueva Sede:</strong> Aula 104, UPIITA-IPN <span style="font-size:11px; color:#666666;">(Antes Auditorio)</span><br>
+                            <div style="background-color:#F8F9FA; border-left:4px solid #00D4FF; padding:12px; font-size:13px; color:#333333; text-align:left; line-height:1.5; margin-bottom:20px;">
+                                📍 <strong>Sede:</strong> Auditorio UPIITA-IPN<br>
                                 📅 <strong>Fecha:</strong> 01 al 05 de Junio, 2026<br>
-                                ⏰ <strong>Horario:</strong> 10:00 a 12:00 hrs
+                                ⏰ <strong>Horario:</strong> 9:30 a 12:00 hrs
                             </div>
 
                             <div style="margin-top: 15px; margin-bottom: 5px;">

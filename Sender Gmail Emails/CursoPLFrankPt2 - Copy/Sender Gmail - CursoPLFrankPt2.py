@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 current_dir = os.getcwd() 
 
 # Leer el Excel
-ruta_excel = os.path.join(current_dir, r'Datos\Lista de Invitados.xlsx')
+ruta_excel = os.path.join(current_dir, r'Datos\Test.xlsx')
 context = pd.read_excel(ruta_excel)
 
 limit = context.shape[0]
@@ -79,7 +79,7 @@ def sender_html(person, mails, html_file_path):
 
 
 # Bucle de generación y envío
-for i in range( 187, limit):
+for i in range(189, limit):
     extract = context.loc[i]
 
     # 1. Verificar si la celda de correo está vacía (NaN)
