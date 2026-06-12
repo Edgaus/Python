@@ -16,7 +16,7 @@
                         <td align="center" style="background-color:#003366; padding:25px 20px;">
                             <img src="https://github.com/Edgaus/Images-SVG/blob/main/qer.png?raw=true" height="60" alt="Capítulo Estudiantil" style="display:inline-block;" />
                             <div style="color:#ffffff; font-size:24px; font-weight:800; font-style:italic; margin-top:15px; line-height:1.2;">
-                                ¡Hola, {{ Nombre }} {{ Apellido }}!
+                                ¡Hola, {{ Participante }}!
                             </div>
                         </td>
                     </tr>
@@ -24,10 +24,10 @@
                     <tr>
                         <td align="center" style="padding:25px 25px 20px;">
                             <div style="font-size:16px; color:#003366; font-weight:bold; margin-bottom:12px; text-transform:uppercase;">
-                                ¡Falta muy poco!
+                                ¡Muchas Gracias por tu asistencia!
                             </div>
-                            <div style="font-size:14px; color:#444444; line-height:1.5; margin-bottom:15px;">
-                                Te esperamos la próxima semana para la <strong>Parte 2</strong> del Curso de Fotoluminiscencia de Nanomateriales, impartido por el <strong>Dr. Frank Güell</strong>. ¡Ahora más fotoluminiscente que nunca!
+                            <div style="font-size:14px; color:#444444; line-height:1.5; margin-bottom:15px;">  
+                                Como agradecimiento por tu tiempo y dedicación en asistir a la <strong>segunda parte</strong> del curso  <strong>Fotoluminiscencia de Nanomateriales</strong>, se te otorgará una <strong>constancia de asistencia</strong>. ¡Ahora más fotoluminiscente que nunca!
                             </div>
                             
                             <div style="background-color:#F8F9FA; border-left:4px solid #00D4FF; padding:12px; font-size:13px; color:#333333; text-align:left; line-height:1.5; margin-bottom:20px;">
@@ -36,12 +36,7 @@
                                 ⏰ <strong>Horario:</strong> 9:30 a 12:00 hrs
                             </div>
 
-                            <div style="margin-top: 15px; margin-bottom: 5px;">
-                                <a href="https://site.smctsm.org.mx/jovenes-investigadores/fotoluminiscencia-de-nanomateriales/registro" 
-                                   style="background-color:#00D4FF; color:#003366; font-weight:bold; text-decoration:none; padding:12px 30px; border-radius:5px; display:inline-block; font-size:14px; text-transform:uppercase; letter-spacing:1px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
-                                    Completa tu Registro Aquí
-                                </a>
-                            </div>
+                            
                         </td>
                     </tr>
 
