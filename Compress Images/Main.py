@@ -80,8 +80,8 @@ def compress_image(relative_input_path, reduction_percentage=50):
 # How to use the script
 # ==========================================
 if __name__ == "__main__":
-    image_file = "Green WF.png" 
-    compression_amount = 50 
+    image_file = "Photon Logo.png" 
+    compression_amount = 80 
     
     # Use os.path.join to safely combine the folder and file name
     input_relative_path = os.path.join("Images", image_file)
