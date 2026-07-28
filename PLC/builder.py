@@ -1,6 +1,7 @@
 import sys
 import json
 import subprocess
+import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, 
                              QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, 
                              QPushButton, QVBoxLayout, QHBoxLayout, QWidget, 
@@ -12,9 +13,6 @@ from PyQt6.QtCore import Qt, QRectF, QTimer
 from PyQt6.QtGui import QBrush, QColor, QPen, QFont, QPainter
 from PyQt6.QtWidgets import QStyle
 
-# ==========================================
-# CATÁLOGO DE MATERIALES Y ELEMENTOS
-# ==========================================
 MATERIAL_CATALOG = {
     "Silicon Substrate": {"color": "#bdc3c7", "elements": [], "display_name": "Sustrato (Silicio)"}, 
     "GaAs Substrate": {"color": "#95a5a6", "elements": [], "display_name": "Sustrato (GaAs)"}, 
@@ -34,9 +32,6 @@ MATERIAL_CATALOG = {
 
 SUBSTRATE_TYPES = ["Silicon Substrate", "GaAs Substrate", "Sapphire Substrate"]
 
-# ==========================================
-# DIÁLOGO PERSONALIZADO MULTILÍNEA
-# ==========================================
 class CommentDialog(QDialog):
     def __init__(self, current_text="", parent=None):
         super().__init__(parent)
@@ -66,9 +61,6 @@ class CommentDialog(QDialog):
     def get_comment(self):
         return self.text_edit.toPlainText()
 
-# ==========================================
-# WIDGET VISUAL PARA EL DIAGRAMA DE CICLO
-# ==========================================
 class TimingDiagramWidget(QWidget):
     def __init__(self, element, t_shift, t_open, t_close, total_growth, parent=None):
         super().__init__(parent)
@@ -173,9 +165,6 @@ class TimingDiagramWidget(QWidget):
         painter.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         painter.drawText(width - margin_right + 15, rect_y + 35, f"{cycles:.1f}")
 
-# ==========================================
-# CAPA VISUAL PERSONALIZADA
-# ==========================================
 class MaterialLayer(QGraphicsRectItem):
     def __init__(self, name, properties, y_pos):
         super().__init__(0, 0, 310, 45)  
@@ -245,13 +234,10 @@ class MaterialLayer(QGraphicsRectItem):
                 self.setPen(self.default_pen)
         return super().itemChange(change, value)
 
-# ==========================================
-# INTERFAZ GRÁFICA PRINCIPAL
-# ==========================================
-class MainWindow(QMainWindow):
+class BuilderWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Heterostructure Recipe Builder - Celdas MBE")
+        self.setWindowTitle("Diseñador de Recetas MBE (Builder)")
         self.resize(1250, 800)
 
         self.is_loading = False
@@ -332,7 +318,7 @@ class MainWindow(QMainWindow):
         file_io_layout.addWidget(self.btn_load_recipe)
         right_panel.addLayout(file_io_layout)
 
-        # Botón único "Cocinar" (Reemplaza a Compilar e Imprimir Array)
+        # Botón "Cocinar"
         self.btn_cook = QPushButton("🍳 Cocinar")
         self.btn_cook.setStyleSheet("background-color: #d35400; color: white; font-weight: bold; padding: 10px; font-size: 12pt;")
         self.btn_cook.clicked.connect(self.cook_recipe)
@@ -341,7 +327,6 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(left_panel, 1) 
         main_layout.addLayout(right_panel, 1) 
         
-        self.compiled_recipe = []
         self.current_selected_layer = None
         self.active_diagrams = []
         self.btn_apply_sub = None
@@ -655,13 +640,11 @@ class MainWindow(QMainWindow):
         return compiled_recipe
 
     def cook_recipe(self):
-        # 1. Compilar la receta actual
         recipe_data = self.compile_recipe()
         if not recipe_data:
             QMessageBox.warning(self, "Advertencia", "No hay capas en la cámara para cocinar.")
             return
 
-        # 2. Guardar automáticamente en un archivo JSON temporal (o definitivo) para el otro programa
         json_filename = "receta_actual.json"
         try:
             with open(json_filename, 'w', encoding='utf-8') as f:
@@ -670,30 +653,24 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"No se pudo generar el archivo JSON:\n{e}")
             return
 
-        # 3. Mostrar ventana de anuncio de confirmación (Permite presionar Enter al estar enfocado el botón por defecto)
         msg_box = QMessageBox(self)
         msg_box.setWindowTitle("Confirmación de Crecimiento")
-        msg_box.setText("<b>¡Receta compilada con éxito!</b><br><br>¿Deseas confirmar y terminar la receta para iniciar el software de control?")
+        msg_box.setText("<b>¡Receta lista para ser procesada!</b><br><br>Presiona [Enter] o confirma para abrir el Monitor Principal con la Línea de Tiempo.")
         msg_box.setIcon(QMessageBox.Icon.Question)
         
-        btn_yes = msg_box.addButton("Sí (Cocinar)", QMessageBox.ButtonRole.AcceptRole)
+        btn_yes = msg_box.addButton("Sí, Abrir Monitor", QMessageBox.ButtonRole.AcceptRole)
         btn_no = msg_box.addButton("Cancelar", QMessageBox.ButtonRole.RejectRole)
         msg_box.setDefaultButton(btn_yes)
         
         msg_box.exec()
 
         if msg_box.clickedButton() == btn_yes:
-            # 4. Abrir el otro programa pasando el archivo JSON creado
-            # NOTA: Reemplaza "tu_programa_externo.py" o el ejecutable por la ruta real de tu otro software
-            programa_externo = "tu_programa_externo.py" 
+            # Lanza el programa principal (main.py) pasándole el archivo json
             try:
-                # Si es un script de python:
-                subprocess.Popen([sys.executable, programa_externo, json_filename])
-                # Si fuera un ejecutable directo, usarías: subprocess.Popen([programa_externo, json_filename])
-                
-                QMessageBox.information(self, "Éxito", f"Se ha iniciado el programa externo con la receta: {json_filename}")
+                subprocess.Popen([sys.executable, "main.py", json_filename])
+                self.close() # Cierra la ventana del diseñador
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"No se pudo abrir el programa externo:\n{e}")
+                QMessageBox.critical(self, "Error", f"No se pudo iniciar main.py:\n{e}")
 
     def save_recipe_file(self):
         items = [item for item in self.scene.items() if isinstance(item, MaterialLayer)]
@@ -771,6 +748,6 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = BuilderWindow()
     window.show()
     sys.exit(app.exec())
