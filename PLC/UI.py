@@ -1,19 +1,24 @@
 import sys
 import json
+import subprocess
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, 
                              QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, 
                              QPushButton, QVBoxLayout, QHBoxLayout, QWidget, 
                              QLabel, QComboBox, QGroupBox, QFormLayout, 
                              QDoubleSpinBox, QRadioButton, QButtonGroup, QFrame,
-                             QScrollArea, QInputDialog) # Añadido QInputDialog
-from PyQt6.QtCore import Qt, QRectF
+                             QScrollArea, QDialog, QTextEdit, QStyledItemDelegate,
+                             QFileDialog, QMessageBox)
+from PyQt6.QtCore import Qt, QRectF, QTimer
 from PyQt6.QtGui import QBrush, QColor, QPen, QFont, QPainter
+from PyQt6.QtWidgets import QStyle
 
 # ==========================================
 # CATÁLOGO DE MATERIALES Y ELEMENTOS
 # ==========================================
 MATERIAL_CATALOG = {
-    "Silicon Substrate": {"color": "#bdc3c7", "elements": []}, 
+    "Silicon Substrate": {"color": "#bdc3c7", "elements": [], "display_name": "Sustrato (Silicio)"}, 
+    "GaAs Substrate": {"color": "#95a5a6", "elements": [], "display_name": "Sustrato (GaAs)"}, 
+    "Sapphire Substrate": {"color": "#7f8c8d", "elements": [], "display_name": "Sustrato (Zafiro)"},
     "AlAs": {"color": "#e74c3c", "elements": ["Al", "As"]}, 
     "GaAs": {"color": "#3498db", "elements": ["Ga", "As"]}, 
     "InAs": {"color": "#9b59b6", "elements": ["In", "As"]},              
@@ -27,7 +32,39 @@ MATERIAL_CATALOG = {
     "InGaN": {"color": "#8e44ad", "elements": ["In", "Ga", "N"]}              
 }
 
-GROUP_V_ELEMENTS = ["As", "N"]
+SUBSTRATE_TYPES = ["Silicon Substrate", "GaAs Substrate", "Sapphire Substrate"]
+
+# ==========================================
+# DIÁLOGO PERSONALIZADO MULTILÍNEA
+# ==========================================
+class CommentDialog(QDialog):
+    def __init__(self, current_text="", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Agregar Comentario")
+        self.resize(400, 200)
+        
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("Escribe las observaciones o notas de la capa:"))
+        
+        self.text_edit = QTextEdit(self)
+        self.text_edit.setPlainText(current_text)
+        layout.addWidget(self.text_edit)
+        
+        btn_layout = QHBoxLayout()
+        btn_save = QPushButton("Guardar")
+        btn_save.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold; padding: 6px;")
+        btn_save.clicked.connect(self.accept)
+        
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.setStyleSheet("background-color: #e74c3c; color: white; font-weight: bold; padding: 6px;")
+        btn_cancel.clicked.connect(self.reject)
+        
+        btn_layout.addWidget(btn_save)
+        btn_layout.addWidget(btn_cancel)
+        layout.addLayout(btn_layout)
+        
+    def get_comment(self):
+        return self.text_edit.toPlainText()
 
 # ==========================================
 # WIDGET VISUAL PARA EL DIAGRAMA DE CICLO
@@ -141,18 +178,19 @@ class TimingDiagramWidget(QWidget):
 # ==========================================
 class MaterialLayer(QGraphicsRectItem):
     def __init__(self, name, properties, y_pos):
-        super().__init__(0, 0, 310, 45)  # Ancho ajustado para dar espacio al comentario
+        super().__init__(0, 0, 310, 45)  
         self.name = name
         self.elements = properties["elements"]
-        self.comment = "" # Atributo para almacenar el comentario
+        self.comment = "" 
         
-        self.setBrush(QBrush(QColor(properties["color"])))
+        self.is_substrate = ("Substrate" in name or name in SUBSTRATE_TYPES)
+        self.growth_time = 0.0 if self.is_substrate else 60.0 
+        
+        self.setBrush(QBrush(QColor(properties.get("color", "#bdc3c7"))))
         self.default_pen = QPen(Qt.GlobalColor.black, 2)
         self.setPen(self.default_pen)
         
-        self.growth_time = 60.0 
         self.element_data = {}
-        
         for el in self.elements:
             self.element_data[el] = {
                 "mode": "Continuo",
@@ -161,23 +199,28 @@ class MaterialLayer(QGraphicsRectItem):
                 "t_close": 5.0           
             }
         
-        # Texto principal de la capa
-        self.text = QGraphicsTextItem(name, self) 
+        display_text = f"Sustrato ({name.replace(' Substrate', '')})" if self.is_substrate else name
+        self.text = QGraphicsTextItem(display_text, self) 
         font = QFont("Arial", 11, QFont.Weight.Bold)
         self.text.setFont(font)
-        text_rect = self.text.boundingRect()
-        self.text.setPos((310 - text_rect.width()) / 2, (45 - text_rect.height()) / 2)
         
-        # Etiqueta visual para el comentario (inicialmente vacía)
         self.comment_text = QGraphicsTextItem("", self)
         comment_font = QFont("Arial", 9)
-        comment_font.setItalic(True) # Forma correcta en PyQt6 para la cursiva
+        comment_font.setItalic(True)
         self.comment_text.setFont(comment_font)
-        self.comment_text.setDefaultTextColor(QColor("#f39c12"))
+        self.comment_text.setDefaultTextColor(QColor("#f39c12")) 
         
         self.setFlag(QGraphicsRectItem.GraphicsItemFlag.ItemIsSelectable) 
         self.setFlag(QGraphicsRectItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self.setPos(25, y_pos)
+        self.update_layout()
+
+    def update_material(self, new_name, new_color):
+        self.name = new_name
+        self.setBrush(QBrush(QColor(new_color)))
+        display_text = f"Sustrato ({new_name.replace(' Substrate', '')})"
+        self.text.setPlainText(display_text)
+        self.update_layout()
 
     def set_comment(self, comment):
         self.comment = comment
@@ -185,10 +228,14 @@ class MaterialLayer(QGraphicsRectItem):
             self.comment_text.setPlainText(f"💬 {comment}")
         else:
             self.comment_text.setPlainText("")
-        
-        # Reajustar la posición para que aparezca exactamente a la derecha de la capa
-        rect_width = self.rect().width()
-        self.comment_text.setPos(rect_width + 10, (45 - self.comment_text.boundingRect().height()) / 2)
+        self.update_layout()
+
+    def update_layout(self):
+        base_height = 45
+        self.setRect(0, 0, 310, base_height)
+        text_rect = self.text.boundingRect()
+        self.text.setPos((310 - text_rect.width()) / 2, (base_height - text_rect.height()) / 2)
+        self.comment_text.setPos(320, 0)
 
     def itemChange(self, change, value):
         if change == QGraphicsRectItem.GraphicsItemChange.ItemSelectedHasChanged:
@@ -207,15 +254,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Heterostructure Recipe Builder - Celdas MBE")
         self.resize(1250, 800)
 
+        self.is_loading = False
+
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
 
-        # ------------------------------------------
-        # PANEL IZQUIERDO: Canvas (Cámara)
-        # ------------------------------------------
         left_panel = QVBoxLayout()
-        self.scene = QGraphicsScene(0, 0, 500, 750) # Espacio ampliado horizontalmente para comentarios
+        self.scene = QGraphicsScene(0, 0, 550, 750) 
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(self.view.renderHints()) 
         left_panel.addWidget(QLabel("<b>Cámara de Crecimiento</b> (Haz clic en una capa)"))
@@ -226,24 +272,25 @@ class MainWindow(QMainWindow):
 
         controls_layout = QHBoxLayout()
         self.material_dropdown = QComboBox()
-        self.material_dropdown.addItem("--- Base ---")
-        self.material_dropdown.addItem("Silicon Substrate")
-        self.material_dropdown.addItem("--- Arsenuros (Binarios) ---")
-        self.material_dropdown.addItems(["AlAs", "GaAs", "InAs"])
-        self.material_dropdown.addItem("--- Arsenuros (Ternarios) ---")
-        self.material_dropdown.addItems(["InGaAs", "AlGaAs"])
         
-        btn_add = QPushButton("Agregar Capa")
-        btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 6px 15px;")
-        btn_add.clicked.connect(self.add_selected_layer)
+        class ComboBoxDelegate(QStyledItemDelegate):
+            def paint(self, painter, option, index):
+                text = index.data()
+                if "---" in text:
+                    option.state &= ~QStyle.StateFlag.State_Enabled
+                super().paint(painter, option, index)
+
+        self.material_dropdown.setItemDelegate(ComboBoxDelegate(self.material_dropdown))
+        self.populate_dropdown()
+        
+        self.btn_add = QPushButton("Agregar Capa")
+        self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 6px 15px;")
+        self.btn_add.clicked.connect(self.add_selected_layer)
 
         controls_layout.addWidget(self.material_dropdown)
-        controls_layout.addWidget(btn_add)
+        controls_layout.addWidget(self.btn_add)
         left_panel.addLayout(controls_layout)
 
-        # ------------------------------------------
-        # PANEL DERECHO: ScrollArea y Botones
-        # ------------------------------------------
         right_panel = QVBoxLayout()
         
         self.props_group = QGroupBox("Propiedades Dinámicas de la Capa")
@@ -260,28 +307,36 @@ class MainWindow(QMainWindow):
         
         right_panel.addWidget(self.scroll_area)
         
-        # --- NUEVO BOTÓN: AGREGAR COMENTARIO ---
         self.btn_comment = QPushButton("💬 Agregar Comentario")
         self.btn_comment.setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; padding: 8px;")
         self.btn_comment.setEnabled(False)
         self.btn_comment.clicked.connect(self.open_comment_dialog)
         right_panel.addWidget(self.btn_comment)
         
-        # Botón existente para eliminar capa
         self.btn_delete = QPushButton("🗑️ Eliminar Capa")
         self.btn_delete.setStyleSheet("background-color: #e74c3c; color: white; font-weight: bold; padding: 8px;")
         self.btn_delete.setEnabled(False)
         self.btn_delete.clicked.connect(self.delete_selected_layer)
         right_panel.addWidget(self.btn_delete)
 
-        self.btn_compile = QPushButton("1. Compilar Receta")
-        self.btn_compile.clicked.connect(self.compile_recipe)
-        self.btn_execute = QPushButton("2. Imprimir Array")
-        self.btn_execute.setEnabled(False) 
-        self.btn_execute.clicked.connect(self.mock_execution)
+        file_io_layout = QHBoxLayout()
+        self.btn_save_recipe = QPushButton("💾 Guardar Receta")
+        self.btn_save_recipe.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold; padding: 6px;")
+        self.btn_save_recipe.clicked.connect(self.save_recipe_file)
+        
+        self.btn_load_recipe = QPushButton("📂 Cargar Receta")
+        self.btn_load_recipe.setStyleSheet("background-color: #16a085; color: white; font-weight: bold; padding: 6px;")
+        self.btn_load_recipe.clicked.connect(self.load_recipe_file)
+        
+        file_io_layout.addWidget(self.btn_save_recipe)
+        file_io_layout.addWidget(self.btn_load_recipe)
+        right_panel.addLayout(file_io_layout)
 
-        right_panel.addWidget(self.btn_compile)
-        right_panel.addWidget(self.btn_execute)
+        # Botón único "Cocinar" (Reemplaza a Compilar e Imprimir Array)
+        self.btn_cook = QPushButton("🍳 Cocinar")
+        self.btn_cook.setStyleSheet("background-color: #d35400; color: white; font-weight: bold; padding: 10px; font-size: 12pt;")
+        self.btn_cook.clicked.connect(self.cook_recipe)
+        right_panel.addWidget(self.btn_cook)
 
         main_layout.addLayout(left_panel, 1) 
         main_layout.addLayout(right_panel, 1) 
@@ -289,40 +344,121 @@ class MainWindow(QMainWindow):
         self.compiled_recipe = []
         self.current_selected_layer = None
         self.active_diagrams = []
+        self.btn_apply_sub = None
 
-    # ==========================================
-    # LÓGICA
-    # ==========================================
+        self.glow_state = False
+        self.active_glow_button = None 
+
+        self.glow_timer = QTimer(self)
+        self.glow_timer.timeout.connect(self.animate_glow)
+
+        self.init_default_substrate()
+
+    def start_glow(self, color_type):
+        if self.is_loading: return
+        self.active_glow_button = color_type
+        self.glow_state = False
+        self.glow_timer.start(500)
+
+    def stop_glow(self):
+        self.glow_timer.stop()
+        self.active_glow_button = None
+        if hasattr(self, 'btn_apply_sub') and self.btn_apply_sub is not None:
+            try:
+                self.btn_apply_sub.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 6px;")
+            except RuntimeError:
+                pass
+        self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 6px 15px;")
+
+    def animate_glow(self):
+        self.glow_state = not self.glow_state
+        if self.active_glow_button == 'green' and hasattr(self, 'btn_apply_sub') and self.btn_apply_sub is not None:
+            try:
+                if self.glow_state:
+                    self.btn_apply_sub.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold; padding: 6px; border: 3px solid #ffffff;")
+                else:
+                    self.btn_apply_sub.setStyleSheet("background-color: #1e8449; color: white; font-weight: bold; padding: 6px; border: 3px solid #f39c12;")
+            except RuntimeError:
+                pass
+        elif self.active_glow_button == 'yellow':
+            if self.glow_state:
+                self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 6px 15px; border: 3px solid #ffffff;")
+            else:
+                self.btn_add.setStyleSheet("background-color: #b7950b; color: white; font-weight: bold; padding: 6px 15px; border: 3px solid #ffffff;")
+
+    def populate_dropdown(self):
+        self.material_dropdown.clear()
+        has_substrate = any(isinstance(item, MaterialLayer) and item.is_substrate for item in self.scene.items())
+        
+        if not has_substrate:
+            self.material_dropdown.addItem("--- Base ---")
+            self.material_dropdown.addItem("Silicon Substrate")
+            
+        self.material_dropdown.addItem("--- Arsenuros (Binarios) ---")
+        self.material_dropdown.addItems(["AlAs", "GaAs", "InAs"])
+        self.material_dropdown.addItem("--- Arsenuros (Ternarios) ---")
+        self.material_dropdown.addItems(["InGaAs", "AlGaAs"])
+
+    def init_default_substrate(self):
+        properties = MATERIAL_CATALOG.get("Silicon Substrate")
+        layer = MaterialLayer("Silicon Substrate", properties, 650) 
+        self.scene.addItem(layer)
+        self.populate_dropdown()
+        layer.setSelected(True)
+
     def add_selected_layer(self):
+        if self.active_glow_button == 'yellow':
+            self.stop_glow()
+
         material_name = self.material_dropdown.currentText()
-        if "---" in material_name: return 
+        if "---" in material_name: 
+            return 
             
         properties = MATERIAL_CATALOG.get(material_name, {"color":"#fff", "elements":[]}) 
-        layer = MaterialLayer(material_name, properties, self.current_drop_y)
+        layer = MaterialLayer(material_name, properties, 0) 
         self.scene.addItem(layer)
-        self.current_drop_y -= 50 
         
+        self.reorganize_layers()
+
+        if layer.is_substrate:
+            self.populate_dropdown()
+
         self.scene.clearSelection()
         layer.setSelected(True)
-        self.btn_execute.setEnabled(False) 
+
+    def reorganize_layers(self):
+        layers = [item for item in self.scene.items() if isinstance(item, MaterialLayer)]
+        substrate_layers = [l for l in layers if l.is_substrate]
+        active_layers = [l for l in layers if not l.is_substrate]
+        
+        current_y = 650
+        for sub in substrate_layers:
+            sub.setY(current_y)
+            current_y -= 55 
+            
+        for layer in active_layers:
+            layer.setY(current_y)
+            current_y -= 55 
+            
+        self.current_drop_y = current_y
 
     def clear_properties_panel(self):
+        self.btn_apply_sub = None
         while self.form_layout.rowCount() > 1:
             self.form_layout.removeRow(1)
         self.active_diagrams.clear()
 
     def open_comment_dialog(self):
         if not self.current_selected_layer: return
-        
-        current_text = self.current_selected_layer.comment
-        text, ok = QInputDialog.getText(self, "Agregar Comentario", "Comentario para la capa:", text=current_text)
-        if ok:
-            self.current_selected_layer.set_comment(text)
-            self.btn_execute.setEnabled(False)
+        dialog = CommentDialog(self.current_selected_layer.comment, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            comment_text = dialog.get_comment()
+            self.current_selected_layer.set_comment(comment_text)
 
     def on_layer_selected(self):
+        if self.is_loading: return
+
         self.props_group.setUpdatesEnabled(False) 
-        
         selected_items = self.scene.selectedItems()
         self.clear_properties_panel()
         
@@ -338,123 +474,145 @@ class MainWindow(QMainWindow):
         if isinstance(item, MaterialLayer):
             self.current_selected_layer = item
             self.btn_delete.setEnabled(True)
-            self.btn_comment.setEnabled(True) # Habilitar botón de comentario
-            self.lbl_selected_mat.setText(f"<b>{item.name}</b>")
+            self.btn_comment.setEnabled(True) 
             
-            spin_growth = QDoubleSpinBox()
-            spin_growth.setSuffix(" sec")
-            spin_growth.setMaximum(10000.0)
-            spin_growth.setValue(item.growth_time)
-            spin_growth.valueChanged.connect(lambda val, i=item: self.update_growth_time(i, val))
-            self.form_layout.addRow("Tiempo Total Crecimiento:", spin_growth)
-
-            line = QFrame()
-            line.setFrameShape(QFrame.Shape.HLine)
-            line.setFrameShadow(QFrame.Shadow.Sunken)
-            self.form_layout.addRow(line)
-
-            for el in item.elements:
-                element_box = QGroupBox(f"Celda: {el}")
-                elem_layout = QVBoxLayout()
-
-                mode_layout = QHBoxLayout()
-                rb_continuo = QRadioButton("Continuo")
-                rb_ciclo = QRadioButton("Ciclo")
+            if item.is_substrate:
+                self.lbl_selected_mat.setText("<b>Sustrato Base</b>")
                 
-                btn_group = QButtonGroup(element_box)
-                btn_group.addButton(rb_continuo)
-                btn_group.addButton(rb_ciclo)
-
-                current_mode = item.element_data[el]["mode"]
-                if current_mode == "Continuo":
-                    rb_continuo.setChecked(True)
-                else:
-                    rb_ciclo.setChecked(True)
-
-                mode_layout.addWidget(rb_continuo)
-                mode_layout.addWidget(rb_ciclo)
-                elem_layout.addLayout(mode_layout)
-
-                widget_ciclo = QWidget()
-                layout_ciclo = QVBoxLayout(widget_ciclo)
+                self.substrate_combo = QComboBox()
+                self.substrate_combo.addItems(SUBSTRATE_TYPES)
                 
-                inputs_layout = QFormLayout()
+                index = self.substrate_combo.findText(item.name)
+                if index >= 0:
+                    self.substrate_combo.setCurrentIndex(index)
                 
-                spin_tshift = QDoubleSpinBox()
-                spin_tshift.setSuffix(" sec")
-                spin_tshift.setValue(item.element_data[el]["t_shift"])
+                self.form_layout.addRow("Tipo de Sustrato:", self.substrate_combo)
                 
-                spin_topen = QDoubleSpinBox()
-                spin_topen.setSuffix(" sec")
-                spin_topen.setValue(item.element_data[el]["t_open"])
+                self.btn_apply_sub = QPushButton("✓ Confirmar Tipo de Sustrato")
+                self.btn_apply_sub.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 6px;")
+                self.btn_apply_sub.clicked.connect(lambda: self.apply_substrate_change(item))
+                self.form_layout.addRow(self.btn_apply_sub)
                 
-                spin_tclose = QDoubleSpinBox()
-                spin_tclose.setSuffix(" sec")
-                spin_tclose.setValue(item.element_data[el]["t_close"])
+                self.start_glow('green')
                 
-                inputs_layout.addRow("T. Desplazamiento (Shift):", spin_tshift)
-                inputs_layout.addRow("T. Apertura (Open):", spin_topen)
-                inputs_layout.addRow("T. Cierre (Close):", spin_tclose)
-                layout_ciclo.addLayout(inputs_layout)
+            else:
+                self.lbl_selected_mat.setText(f"<b>{item.name}</b>")
                 
-                t_shift = item.element_data[el]["t_shift"]
-                t_open = item.element_data[el]["t_open"]
-                t_close = item.element_data[el]["t_close"]
-                diagram = TimingDiagramWidget(el, t_shift, t_open, t_close, item.growth_time)
-                layout_ciclo.addWidget(diagram)
-                self.active_diagrams.append(diagram)
-                
-                spin_tshift.valueChanged.connect(lambda val, e=el, i=item, diag=diagram: self.update_cycle_shift(i, e, val, diag))
-                spin_topen.valueChanged.connect(lambda val, e=el, i=item, diag=diagram: self.update_cycle_open(i, e, val, diag))
-                spin_tclose.valueChanged.connect(lambda val, e=el, i=item, diag=diagram: self.update_cycle_close(i, e, val, diag))
+                spin_growth = QDoubleSpinBox()
+                spin_growth.setSuffix(" sec")
+                spin_growth.setMaximum(10000.0)
+                spin_growth.setValue(item.growth_time)
+                spin_growth.valueChanged.connect(lambda val, i=item: self.update_growth_time(i, val))
+                self.form_layout.addRow("Tiempo Total Crecimiento:", spin_growth)
 
-                elem_layout.addWidget(widget_ciclo)
+                line = QFrame()
+                line.setFrameShape(QFrame.Shape.HLine)
+                line.setFrameShadow(QFrame.Shadow.Sunken)
+                self.form_layout.addRow(line)
 
-                widget_ciclo.setVisible(current_mode == "Ciclo")
+                for el in item.elements:
+                    element_box = QGroupBox(f"Celda: {el}")
+                    elem_layout = QVBoxLayout()
 
-                rb_continuo.toggled.connect(lambda checked, e=el, i=item, w=widget_ciclo: (
-                    self.update_mode(i, e, "Continuo") if checked else None,
-                    w.setVisible(False) if checked else None
-                ))
-                rb_ciclo.toggled.connect(lambda checked, e=el, i=item, w=widget_ciclo: (
-                    self.update_mode(i, e, "Ciclo") if checked else None,
-                    w.setVisible(True) if checked else None
-                ))
+                    mode_layout = QHBoxLayout()
+                    rb_continuo = QRadioButton("Continuo")
+                    rb_ciclo = QRadioButton("Ciclo")
+                    
+                    btn_group = QButtonGroup(element_box)
+                    btn_group.addButton(rb_continuo)
+                    btn_group.addButton(rb_ciclo)
 
-                element_box.setLayout(elem_layout)
-                self.form_layout.addRow(element_box)
+                    current_mode = item.element_data[el]["mode"]
+                    if current_mode == "Continuo":
+                        rb_continuo.setChecked(True)
+                    else:
+                        rb_ciclo.setChecked(True)
+
+                    mode_layout.addWidget(rb_continuo)
+                    mode_layout.addWidget(rb_ciclo)
+                    elem_layout.addLayout(mode_layout)
+
+                    widget_ciclo = QWidget()
+                    layout_ciclo = QVBoxLayout(widget_ciclo)
+                    
+                    inputs_layout = QFormLayout()
+                    spin_tshift = QDoubleSpinBox()
+                    spin_tshift.setSuffix(" sec")
+                    spin_tshift.setValue(item.element_data[el]["t_shift"])
+                    
+                    spin_topen = QDoubleSpinBox()
+                    spin_topen.setSuffix(" sec")
+                    spin_topen.setValue(item.element_data[el]["t_open"])
+                    
+                    spin_tclose = QDoubleSpinBox()
+                    spin_tclose.setSuffix(" sec")
+                    spin_tclose.setValue(item.element_data[el]["t_close"])
+                    
+                    inputs_layout.addRow("T. Desplazamiento (Shift):", spin_tshift)
+                    inputs_layout.addRow("T. Apertura (Open):", spin_topen)
+                    inputs_layout.addRow("T. Cierre (Close):", spin_tclose)
+                    layout_ciclo.addLayout(inputs_layout)
+                    
+                    t_shift = item.element_data[el]["t_shift"]
+                    t_open = item.element_data[el]["t_open"]
+                    t_close = item.element_data[el]["t_close"]
+                    diagram = TimingDiagramWidget(el, t_shift, t_open, t_close, item.growth_time)
+                    layout_ciclo.addWidget(diagram)
+                    self.active_diagrams.append(diagram)
+                    
+                    spin_tshift.valueChanged.connect(lambda val, e=el, i=item, diag=diagram: self.update_cycle_shift(i, e, val, diag))
+                    spin_topen.valueChanged.connect(lambda val, e=el, i=item, diag=diagram: self.update_cycle_open(i, e, val, diag))
+                    spin_tclose.valueChanged.connect(lambda val, e=el, i=item, diag=diagram: self.update_cycle_close(i, e, val, diag))
+
+                    elem_layout.addWidget(widget_ciclo)
+                    widget_ciclo.setVisible(current_mode == "Ciclo")
+
+                    rb_continuo.toggled.connect(lambda checked, e=el, i=item, w=widget_ciclo: (
+                        self.update_mode(i, e, "Continuo") if checked else None,
+                        w.setVisible(False) if checked else None
+                    ))
+                    rb_ciclo.toggled.connect(lambda checked, e=el, i=item, w=widget_ciclo: (
+                        self.update_mode(i, e, "Ciclo") if checked else None,
+                        w.setVisible(True) if checked else None
+                    ))
+
+                    element_box.setLayout(elem_layout)
+                    self.form_layout.addRow(element_box)
 
         self.props_group.setUpdatesEnabled(True)
 
+    def apply_substrate_change(self, item):
+        self.stop_glow()
+        new_name = self.substrate_combo.currentText()
+        properties = MATERIAL_CATALOG.get(new_name, {"color": "#bdc3c7"})
+        item.update_material(new_name, properties["color"])
+        self.start_glow('yellow')
+
     def update_growth_time(self, item, value):
         item.growth_time = value
-        self.btn_execute.setEnabled(False)
         for diag in self.active_diagrams:
             el = diag.element
             diag.update_values(item.element_data[el]["t_shift"], item.element_data[el]["t_open"], item.element_data[el]["t_close"], value)
 
     def update_mode(self, item, element, mode):
         item.element_data[element]["mode"] = mode
-        self.btn_execute.setEnabled(False)
 
     def update_cycle_shift(self, item, element, value, diagram):
         item.element_data[element]["t_shift"] = value
-        self.btn_execute.setEnabled(False)
         diagram.update_values(value, item.element_data[element]["t_open"], item.element_data[element]["t_close"], item.growth_time)
 
     def update_cycle_open(self, item, element, value, diagram):
         item.element_data[element]["t_open"] = value
-        self.btn_execute.setEnabled(False)
         diagram.update_values(item.element_data[element]["t_shift"], value, item.element_data[element]["t_close"], item.growth_time)
 
     def update_cycle_close(self, item, element, value, diagram):
         item.element_data[element]["t_close"] = value
-        self.btn_execute.setEnabled(False)
         diagram.update_values(item.element_data[element]["t_shift"], item.element_data[element]["t_open"], value, item.growth_time)
 
     def delete_selected_layer(self):
         if not self.current_selected_layer: return
-        deleted_y = self.current_selected_layer.y()
+        is_sub = self.current_selected_layer.is_substrate
+        
         self.scene.removeItem(self.current_selected_layer)
         self.current_selected_layer = None
         self.clear_properties_panel()
@@ -462,19 +620,17 @@ class MainWindow(QMainWindow):
         self.btn_delete.setEnabled(False)
         self.btn_comment.setEnabled(False)
         
-        for item in self.scene.items():
-            if isinstance(item, MaterialLayer):
-                if item.y() < deleted_y:
-                    item.setY(item.y() + 50)
-        self.current_drop_y += 50
+        self.reorganize_layers()
+        if is_sub:
+            self.populate_dropdown()
 
     def compile_recipe(self):
         items = self.scene.items()
         rect_items = [item for item in items if isinstance(item, MaterialLayer)]
-        if not rect_items: return
+        if not rect_items: return []
 
         sorted_items = sorted(rect_items, key=lambda item: item.pos().y(), reverse=True)
-        self.compiled_recipe = []
+        compiled_recipe = []
         for index, item in enumerate(sorted_items):
             clean_element_data = {}
             for el, data in item.element_data.items():
@@ -482,18 +638,136 @@ class MainWindow(QMainWindow):
                     clean_element_data[el] = {"mode": "Continuo"}
                 else:
                     clean_element_data[el] = data
+            
             step_data = {
                 "paso": index + 1, 
                 "material": item.name,
-                "comentario": item.comment, # Se incluye el comentario en el JSON
-                "tiempo_total_crecimiento_sec": item.growth_time,
-                "parametros_celdas": clean_element_data 
+                "comentario": item.comment, 
             }
-            self.compiled_recipe.append(step_data)
-        self.btn_execute.setEnabled(True)
+            if not item.is_substrate:
+                step_data["tiempo_total_crecimiento_sec"] = item.growth_time
+                step_data["parametros_celdas"] = clean_element_data
+            else:
+                step_data["tiempo_total_crecimiento_sec"] = 0.0
+                step_data["parametros_celdas"] = {}
 
-    def mock_execution(self):
-        print(json.dumps(self.compiled_recipe, indent=4, ensure_ascii=False))
+            compiled_recipe.append(step_data)
+        return compiled_recipe
+
+    def cook_recipe(self):
+        # 1. Compilar la receta actual
+        recipe_data = self.compile_recipe()
+        if not recipe_data:
+            QMessageBox.warning(self, "Advertencia", "No hay capas en la cámara para cocinar.")
+            return
+
+        # 2. Guardar automáticamente en un archivo JSON temporal (o definitivo) para el otro programa
+        json_filename = "receta_actual.json"
+        try:
+            with open(json_filename, 'w', encoding='utf-8') as f:
+                json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo generar el archivo JSON:\n{e}")
+            return
+
+        # 3. Mostrar ventana de anuncio de confirmación (Permite presionar Enter al estar enfocado el botón por defecto)
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Confirmación de Crecimiento")
+        msg_box.setText("<b>¡Receta compilada con éxito!</b><br><br>¿Deseas confirmar y terminar la receta para iniciar el software de control?")
+        msg_box.setIcon(QMessageBox.Icon.Question)
+        
+        btn_yes = msg_box.addButton("Sí (Cocinar)", QMessageBox.ButtonRole.AcceptRole)
+        btn_no = msg_box.addButton("Cancelar", QMessageBox.ButtonRole.RejectRole)
+        msg_box.setDefaultButton(btn_yes)
+        
+        msg_box.exec()
+
+        if msg_box.clickedButton() == btn_yes:
+            # 4. Abrir el otro programa pasando el archivo JSON creado
+            # NOTA: Reemplaza "tu_programa_externo.py" o el ejecutable por la ruta real de tu otro software
+            programa_externo = "tu_programa_externo.py" 
+            try:
+                # Si es un script de python:
+                subprocess.Popen([sys.executable, programa_externo, json_filename])
+                # Si fuera un ejecutable directo, usarías: subprocess.Popen([programa_externo, json_filename])
+                
+                QMessageBox.information(self, "Éxito", f"Se ha iniciado el programa externo con la receta: {json_filename}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"No se pudo abrir el programa externo:\n{e}")
+
+    def save_recipe_file(self):
+        items = [item for item in self.scene.items() if isinstance(item, MaterialLayer)]
+        if not items:
+            QMessageBox.warning(self, "Advertencia", "No hay capas para guardar en la receta.")
+            return
+
+        sorted_items = sorted(items, key=lambda item: item.pos().y(), reverse=True)
+        recipe_data = []
+
+        for item in sorted_items:
+            layer_info = {
+                "name": item.name,
+                "is_substrate": item.is_substrate,
+                "growth_time": item.growth_time,
+                "comment": item.comment,
+                "element_data": item.element_data
+            }
+            recipe_data.append(layer_info)
+
+        file_path, _ = QFileDialog.getSaveFileName(self, "Guardar Receta MBE", "", "Archivos JSON (*.json)")
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+                QMessageBox.information(self, "Éxito", "Receta guardada correctamente.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"No se pudo guardar el archivo:\n{e}")
+
+    def load_recipe_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Cargar Receta MBE", "", "Archivos JSON (*.json)")
+        if file_path:
+            try:
+                self.is_loading = True
+                self.stop_glow()
+
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    recipe_data = json.load(f)
+
+                self.scene.clearSelection()
+                for item in list(self.scene.items()):
+                    if isinstance(item, MaterialLayer):
+                        self.scene.removeItem(item)
+
+                self.clear_properties_panel()
+                self.current_selected_layer = None
+                self.btn_delete.setEnabled(False)
+                self.btn_comment.setEnabled(False)
+
+                current_y = 650
+                for data in recipe_data:
+                    name = data["name"]
+                    properties = MATERIAL_CATALOG.get(name, {"color": "#bdc3c7", "elements": []})
+                    
+                    layer = MaterialLayer(name, properties, current_y)
+                    layer.growth_time = data.get("growth_time", 60.0)
+                    layer.set_comment(data.get("comment", ""))
+                    layer.element_data = data.get("element_data", {})
+                    
+                    self.scene.addItem(layer)
+
+                self.reorganize_layers()
+                self.populate_dropdown()
+
+                self.is_loading = False
+                substrate_items = [item for item in self.scene.items() if isinstance(item, MaterialLayer) and item.is_substrate]
+                if substrate_items:
+                    substrate_items[0].setSelected(True)
+
+                QMessageBox.information(self, "Éxito", "Receta cargada correctamente.")
+
+            except Exception as e:
+                self.is_loading = False
+                QMessageBox.critical(self, "Error", f"No se pudo cargar el archivo:\n{e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

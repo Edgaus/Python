@@ -1,0 +1,29 @@
+[
+    {
+        "paso": 1,
+        "material": "Silicon Substrate",
+        "comentario": "",
+        "tiempo_total_crecimiento_sec": 0.0,
+        "parametros_celdas": {}
+    },
+    {
+        "paso": 2,
+        "material": "AlAs",
+        "comentario": "",
+        "tiempo_total_crecimiento_sec": 60.0,
+        "parametros_celdas": {
+            "Al": {
+                "mode": "Ciclo",
+                "t_shift": 2.0,
+                "t_open": 9.0,
+                "t_close": 2.0
+            },
+            "As": {
+                "mode": "Ciclo",
+                "t_shift": 6.0,
+                "t_open": 4.0,
+                "t_close": 10.0
+            }
+        }
+    }
+]

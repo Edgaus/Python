@@ -1,0 +1,29 @@
+[
+    {
+        "name": "Silicon Substrate",
+        "is_substrate": true,
+        "growth_time": 0.0,
+        "comment": "",
+        "element_data": {}
+    },
+    {
+        "name": "AlAs",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "Al": {
+                "mode": "Ciclo",
+                "t_shift": 2.0,
+                "t_open": 9.0,
+                "t_close": 2.0
+            },
+            "As": {
+                "mode": "Ciclo",
+                "t_shift": 6.0,
+                "t_open": 4.0,
+                "t_close": 10.0
+            }
+        }
+    }
+]
