@@ -267,7 +267,8 @@ class MaterialLayer(QGraphicsRectItem):
     def set_comment(self, comment):
         self.comment = comment
         if comment:
-            self.comment_text.setPlainText(f"💬 {comment}")
+            # Ahora asignamos el comentario limpio, sin la nubecita
+            self.comment_text.setPlainText(comment)
         else:
             self.comment_text.setPlainText("")
         self.update_layout()
@@ -329,6 +330,8 @@ class BuilderWindow(QMainWindow):
 
         self.material_dropdown.setItemDelegate(ComboBoxDelegate(self.material_dropdown))
         self.populate_dropdown()
+        
+        self.material_dropdown.currentIndexChanged.connect(self.on_material_dropdown_changed)
         
         self.btn_add = QPushButton("✚ Agregar")
         self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 4px 10px;")
@@ -411,12 +414,16 @@ class BuilderWindow(QMainWindow):
     def stop_glow(self):
         self.glow_timer.stop()
         self.active_glow_button = None
+        
         if hasattr(self, 'btn_apply_sub') and self.btn_apply_sub is not None:
             try:
                 self.btn_apply_sub.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 4px 8px;")
             except RuntimeError:
                 pass
+                
         self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 4px 10px;")
+        
+        self.material_dropdown.setStyleSheet("background-color: #34495e; color: #ecf0f1; border: 1px solid #7f8c8d; border-radius: 4px; padding: 3px;")
 
     def animate_glow(self):
         self.glow_state = not self.glow_state
@@ -433,6 +440,11 @@ class BuilderWindow(QMainWindow):
                 self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 4px 10px; border: 2px solid #ffffff;")
             else:
                 self.btn_add.setStyleSheet("background-color: #b7950b; color: white; font-weight: bold; padding: 4px 10px; border: 2px solid #ffffff;")
+        elif self.active_glow_button == 'purple':
+            if self.glow_state:
+                self.material_dropdown.setStyleSheet("background-color: #9b59b6; color: white; border: 2px solid #ffffff; border-radius: 4px; padding: 3px;")
+            else:
+                self.material_dropdown.setStyleSheet("background-color: #34495e; color: #ecf0f1; border: 1px solid #7f8c8d; border-radius: 4px; padding: 3px;")
 
     def populate_dropdown(self):
         self.material_dropdown.clear()
@@ -447,6 +459,13 @@ class BuilderWindow(QMainWindow):
         self.material_dropdown.addItem("--- Arsenuros (Ternarios) ---")
         self.material_dropdown.addItems(["InGaAs", "AlGaAs"])
 
+    def on_material_dropdown_changed(self):
+        if self.active_glow_button == 'purple':
+            text = self.material_dropdown.currentText()
+            if "---" not in text:
+                self.stop_glow()
+                self.start_glow('yellow')
+
     def init_default_substrate(self):
         properties = MATERIAL_CATALOG.get("Silicon Substrate")
         layer = MaterialLayer("Silicon Substrate", properties, 650) 
@@ -455,7 +474,7 @@ class BuilderWindow(QMainWindow):
         layer.setSelected(True)
 
     def add_selected_layer(self):
-        if self.active_glow_button == 'yellow':
+        if self.active_glow_button == 'yellow' or self.active_glow_button == 'purple':
             self.stop_glow()
 
         material_name = self.material_dropdown.currentText()
@@ -479,15 +498,23 @@ class BuilderWindow(QMainWindow):
         substrate_layers = [l for l in layers if l.is_substrate]
         active_layers = [l for l in layers if not l.is_substrate]
         
-        current_y = 650
+        # INVERTIMOS la lista para apilar desde la capa más antigua a la más nueva
+        active_layers.reverse()
+        
+        # Ajustamos el Y inicial a 695 para que el sustrato (que tiene base 45) termine en Y=650 exactos
+        current_y = 695
         
         for sub in substrate_layers:
+            # Restamos la altura de la capa actual ANTES de asignarle la coordenada
+            current_y -= sub.rect().height()
             sub.setY(current_y)
-            current_y -= (sub.rect().height() + 4) 
+            # Damos solo un margen de 4px de espaciado
+            current_y -= 4 
             
         for layer in active_layers:
+            current_y -= layer.rect().height()
             layer.setY(current_y)
-            current_y -= (layer.rect().height() + 4) 
+            current_y -= 4 
             
         self.current_drop_y = current_y
 
@@ -638,7 +665,9 @@ class BuilderWindow(QMainWindow):
         new_name = self.substrate_combo.currentText()
         properties = MATERIAL_CATALOG.get(new_name, {"color": "#bdc3c7"})
         item.update_material(new_name, properties["color"])
-        self.start_glow('yellow')
+        
+        self.start_glow('purple')
+        self.scene.clearSelection()
 
     def update_growth_time(self, item, value):
         item.growth_time = value
