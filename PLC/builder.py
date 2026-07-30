@@ -63,6 +63,9 @@ MATERIAL_CATALOG = {
     "Silicon Substrate": {"color": "#bdc3c7", "elements": [], "display_name": "Sustrato (Silicio)"}, 
     "GaAs Substrate": {"color": "#95a5a6", "elements": [], "display_name": "Sustrato (GaAs)"}, 
     "Sapphire Substrate": {"color": "#7f8c8d", "elements": [], "display_name": "Sustrato (Zafiro)"},
+    "Magnesium Oxide Substrate": {"color": "#34495e", "elements": [], "display_name": "Sustrato (Oxido de Magnesio)"},
+    "Diamond Substrate": {"color": "#2c3e50", "elements": [], "display_name": "Sustrato (Diamante)"},
+    "SiC Substrate": {"color": "#16a085", "elements": [], "display_name": "Sustrato (SiC)"},
     "AlAs": {"color": "#e74c3c", "elements": ["Al", "As"]}, 
     "GaAs": {"color": "#3498db", "elements": ["Ga", "As"]}, 
     "InAs": {"color": "#9b59b6", "elements": ["In", "As"]},              
@@ -76,7 +79,7 @@ MATERIAL_CATALOG = {
     "InGaN": {"color": "#8e44ad", "elements": ["In", "Ga", "N"]}              
 }
 
-SUBSTRATE_TYPES = ["Silicon Substrate", "GaAs Substrate", "Sapphire Substrate"]
+SUBSTRATE_TYPES = ["Silicon Substrate", "GaAs Substrate", "Sapphire Substrate", "Magnesium Oxide Substrate", "Diamond Substrate", "SiC Substrate"]
 
 class CommentDialog(QDialog):
     def __init__(self, current_text="", parent=None):
