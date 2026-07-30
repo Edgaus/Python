@@ -13,6 +13,52 @@ from PyQt6.QtCore import Qt, QRectF, QTimer
 from PyQt6.QtGui import QBrush, QColor, QPen, QFont, QPainter
 from PyQt6.QtWidgets import QStyle
 
+# ==========================================
+# HOJA DE ESTILOS GLOBAL (DARK THEME)
+# ==========================================
+STYLE_SHEET = """
+QMainWindow {
+    background-color: #2c3e50;
+}
+QLabel {
+    color: #ecf0f1;
+}
+QGroupBox {
+    background-color: rgba(52, 73, 94, 0.7);
+    border: 1px solid #7f8c8d;
+    border-radius: 6px;
+    margin-top: 12px;
+    color: #ecf0f1;
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px;
+}
+QComboBox, QDoubleSpinBox, QTextEdit {
+    background-color: #34495e;
+    color: #ecf0f1;
+    border: 1px solid #7f8c8d;
+    border-radius: 4px;
+    padding: 3px;
+}
+QScrollArea {
+    background: transparent;
+    border: none;
+}
+QRadioButton {
+    color: #ecf0f1;
+}
+QPushButton {
+    border-radius: 5px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+"""
+
 MATERIAL_CATALOG = {
     "Silicon Substrate": {"color": "#bdc3c7", "elements": [], "display_name": "Sustrato (Silicio)"}, 
     "GaAs Substrate": {"color": "#95a5a6", "elements": [], "display_name": "Sustrato (GaAs)"}, 
@@ -37,6 +83,7 @@ class CommentDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Agregar Comentario")
         self.resize(400, 200)
+        self.setStyleSheet(STYLE_SHEET)
         
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Escribe las observaciones o notas de la capa:"))
@@ -47,11 +94,11 @@ class CommentDialog(QDialog):
         
         btn_layout = QHBoxLayout()
         btn_save = QPushButton("Guardar")
-        btn_save.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold; padding: 6px;")
+        btn_save.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold; padding: 5px;")
         btn_save.clicked.connect(self.accept)
         
         btn_cancel = QPushButton("Cancelar")
-        btn_cancel.setStyleSheet("background-color: #e74c3c; color: white; font-weight: bold; padding: 6px;")
+        btn_cancel.setStyleSheet("background-color: #e74c3c; color: white; font-weight: bold; padding: 5px;")
         btn_cancel.clicked.connect(self.reject)
         
         btn_layout.addWidget(btn_save)
@@ -82,9 +129,9 @@ class TimingDiagramWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        bg_color = QColor("#222222") 
+        bg_color = QColor(30, 30, 30, 180) 
         blue_fill = QColor("#2980b9") 
-        line_color = QColor("#7f8c8d") 
+        line_color = QColor("#95a5a6") 
         text_color = QColor("#ecf0f1") 
         
         width = self.width()
@@ -109,7 +156,7 @@ class TimingDiagramWidget(QWidget):
         rect_h = 40
         
         painter.setPen(QPen(text_color))
-        painter.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        painter.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         painter.drawText(QRectF(0, 8, width, 20), Qt.AlignmentFlag.AlignCenter, self.element)
         
         painter.setPen(QPen(line_color, 1.5))
@@ -140,7 +187,7 @@ class TimingDiagramWidget(QWidget):
         painter.drawLine(margin_left + draw_width, arrow_y, margin_left + draw_width - 6, arrow_y + 4)
         
         painter.setPen(QPen(text_color))
-        painter.setFont(QFont("Arial", 9))
+        painter.setFont(QFont("Arial", 8))
         
         t1 = self.t_shift
         t2 = self.t_shift + self.t_open
@@ -162,7 +209,7 @@ class TimingDiagramWidget(QWidget):
         
         cycles = self.total_growth / period if period > 0 else 0
         painter.drawText(width - margin_right + 15, rect_y + 15, "Cycles:")
-        painter.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        painter.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         painter.drawText(width - margin_right + 15, rect_y + 35, f"{cycles:.1f}")
 
 class MaterialLayer(QGraphicsRectItem):
@@ -175,8 +222,11 @@ class MaterialLayer(QGraphicsRectItem):
         self.is_substrate = ("Substrate" in name or name in SUBSTRATE_TYPES)
         self.growth_time = 0.0 if self.is_substrate else 60.0 
         
-        self.setBrush(QBrush(QColor(properties.get("color", "#bdc3c7"))))
-        self.default_pen = QPen(Qt.GlobalColor.black, 2)
+        self.base_color = QColor(properties.get("color", "#bdc3c7"))
+        self.base_color.setAlpha(200) 
+        self.setBrush(QBrush(self.base_color))
+        
+        self.default_pen = QPen(QColor("#2c3e50"), 1)
         self.setPen(self.default_pen)
         
         self.element_data = {}
@@ -190,14 +240,15 @@ class MaterialLayer(QGraphicsRectItem):
         
         display_text = f"Sustrato ({name.replace(' Substrate', '')})" if self.is_substrate else name
         self.text = QGraphicsTextItem(display_text, self) 
-        font = QFont("Arial", 11, QFont.Weight.Bold)
+        font = QFont("Arial", 10, QFont.Weight.Bold)
         self.text.setFont(font)
+        self.text.setDefaultTextColor(QColor("#111"))
         
         self.comment_text = QGraphicsTextItem("", self)
-        comment_font = QFont("Arial", 9)
+        comment_font = QFont("Arial", 8)
         comment_font.setItalic(True)
         self.comment_text.setFont(comment_font)
-        self.comment_text.setDefaultTextColor(QColor("#f39c12")) 
+        self.comment_text.setDefaultTextColor(QColor("#f1c40f")) 
         
         self.setFlag(QGraphicsRectItem.GraphicsItemFlag.ItemIsSelectable) 
         self.setFlag(QGraphicsRectItem.GraphicsItemFlag.ItemSendsGeometryChanges)
@@ -206,7 +257,9 @@ class MaterialLayer(QGraphicsRectItem):
 
     def update_material(self, new_name, new_color):
         self.name = new_name
-        self.setBrush(QBrush(QColor(new_color)))
+        self.base_color = QColor(new_color)
+        self.base_color.setAlpha(200)
+        self.setBrush(QBrush(self.base_color))
         display_text = f"Sustrato ({new_name.replace(' Substrate', '')})"
         self.text.setPlainText(display_text)
         self.update_layout()
@@ -221,15 +274,19 @@ class MaterialLayer(QGraphicsRectItem):
 
     def update_layout(self):
         base_height = 45
-        self.setRect(0, 0, 310, base_height)
+        comment_height = self.comment_text.boundingRect().height() if self.comment else 0
+        total_height = max(base_height, comment_height + 10)
+        
+        self.setRect(0, 0, 310, total_height)
+        
         text_rect = self.text.boundingRect()
-        self.text.setPos((310 - text_rect.width()) / 2, (base_height - text_rect.height()) / 2)
-        self.comment_text.setPos(320, 0)
+        self.text.setPos((310 - text_rect.width()) / 2, (total_height - text_rect.height()) / 2)
+        self.comment_text.setPos(320, (total_height - comment_height) / 2)
 
     def itemChange(self, change, value):
         if change == QGraphicsRectItem.GraphicsItemChange.ItemSelectedHasChanged:
             if self.isSelected():
-                self.setPen(QPen(Qt.GlobalColor.white, 3, Qt.PenStyle.DashLine))
+                self.setPen(QPen(QColor("#ecf0f1"), 2, Qt.PenStyle.DashLine))
             else:
                 self.setPen(self.default_pen)
         return super().itemChange(change, value)
@@ -239,6 +296,7 @@ class BuilderWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Diseñador de Recetas MBE (Builder)")
         self.resize(1250, 800)
+        self.setStyleSheet(STYLE_SHEET)
 
         self.is_loading = False
 
@@ -248,8 +306,11 @@ class BuilderWindow(QMainWindow):
 
         left_panel = QVBoxLayout()
         self.scene = QGraphicsScene(0, 0, 550, 750) 
+        
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(self.view.renderHints()) 
+        self.view.setStyleSheet("background-color: #1e272e; border: 1px solid #7f8c8d; border-radius: 6px;")
+        
         left_panel.addWidget(QLabel("<b>Cámara de Crecimiento</b> (Haz clic en una capa)"))
         left_panel.addWidget(self.view)
         
@@ -269,8 +330,8 @@ class BuilderWindow(QMainWindow):
         self.material_dropdown.setItemDelegate(ComboBoxDelegate(self.material_dropdown))
         self.populate_dropdown()
         
-        self.btn_add = QPushButton("Agregar Capa")
-        self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 6px 15px;")
+        self.btn_add = QPushButton("✚ Agregar")
+        self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 4px 10px;")
         self.btn_add.clicked.connect(self.add_selected_layer)
 
         controls_layout.addWidget(self.material_dropdown)
@@ -279,7 +340,7 @@ class BuilderWindow(QMainWindow):
 
         right_panel = QVBoxLayout()
         
-        self.props_group = QGroupBox("Propiedades Dinámicas de la Capa")
+        self.props_group = QGroupBox("Propiedades de Capa Seleccionada")
         self.form_layout = QFormLayout()
         
         self.lbl_selected_mat = QLabel("<i>Ninguna capa seleccionada</i>")
@@ -288,39 +349,41 @@ class BuilderWindow(QMainWindow):
         
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True) 
-        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame) 
         self.scroll_area.setWidget(self.props_group)
-        
         right_panel.addWidget(self.scroll_area)
         
-        self.btn_comment = QPushButton("💬 Agregar Comentario")
-        self.btn_comment.setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; padding: 8px;")
+        layer_actions_layout = QHBoxLayout()
+        
+        self.btn_comment = QPushButton("💬 Comentario")
+        self.btn_comment.setStyleSheet("background-color: #2980b9; color: white; padding: 4px 8px; font-size: 9pt;")
         self.btn_comment.setEnabled(False)
         self.btn_comment.clicked.connect(self.open_comment_dialog)
-        right_panel.addWidget(self.btn_comment)
         
-        self.btn_delete = QPushButton("🗑️ Eliminar Capa")
-        self.btn_delete.setStyleSheet("background-color: #e74c3c; color: white; font-weight: bold; padding: 8px;")
+        self.btn_delete = QPushButton("🗑️ Eliminar")
+        self.btn_delete.setStyleSheet("background-color: #c0392b; color: white; padding: 4px 8px; font-size: 9pt;")
         self.btn_delete.setEnabled(False)
         self.btn_delete.clicked.connect(self.delete_selected_layer)
-        right_panel.addWidget(self.btn_delete)
+        
+        layer_actions_layout.addWidget(self.btn_comment)
+        layer_actions_layout.addWidget(self.btn_delete)
+        right_panel.addLayout(layer_actions_layout)
 
         file_io_layout = QHBoxLayout()
-        self.btn_save_recipe = QPushButton("💾 Guardar Receta")
-        self.btn_save_recipe.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold; padding: 6px;")
+        
+        self.btn_save_recipe = QPushButton("💾 Guardar")
+        self.btn_save_recipe.setStyleSheet("background-color: #8e44ad; color: white; padding: 5px 10px; font-size: 9pt;")
         self.btn_save_recipe.clicked.connect(self.save_recipe_file)
         
-        self.btn_load_recipe = QPushButton("📂 Cargar Receta")
-        self.btn_load_recipe.setStyleSheet("background-color: #16a085; color: white; font-weight: bold; padding: 6px;")
+        self.btn_load_recipe = QPushButton("📂 Cargar")
+        self.btn_load_recipe.setStyleSheet("background-color: #16a085; color: white; padding: 5px 10px; font-size: 9pt;")
         self.btn_load_recipe.clicked.connect(self.load_recipe_file)
         
         file_io_layout.addWidget(self.btn_save_recipe)
         file_io_layout.addWidget(self.btn_load_recipe)
         right_panel.addLayout(file_io_layout)
 
-        # Botón "Cocinar"
-        self.btn_cook = QPushButton("🍳 Cocinar")
-        self.btn_cook.setStyleSheet("background-color: #d35400; color: white; font-weight: bold; padding: 10px; font-size: 12pt;")
+        self.btn_cook = QPushButton("🍳 Cocinar Receta")
+        self.btn_cook.setStyleSheet("background-color: #d35400; color: white; font-weight: bold; padding: 8px; font-size: 10pt; margin-top: 5px;")
         self.btn_cook.clicked.connect(self.cook_recipe)
         right_panel.addWidget(self.btn_cook)
 
@@ -350,26 +413,26 @@ class BuilderWindow(QMainWindow):
         self.active_glow_button = None
         if hasattr(self, 'btn_apply_sub') and self.btn_apply_sub is not None:
             try:
-                self.btn_apply_sub.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 6px;")
+                self.btn_apply_sub.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 4px 8px;")
             except RuntimeError:
                 pass
-        self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 6px 15px;")
+        self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 4px 10px;")
 
     def animate_glow(self):
         self.glow_state = not self.glow_state
         if self.active_glow_button == 'green' and hasattr(self, 'btn_apply_sub') and self.btn_apply_sub is not None:
             try:
                 if self.glow_state:
-                    self.btn_apply_sub.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold; padding: 6px; border: 3px solid #ffffff;")
+                    self.btn_apply_sub.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold; padding: 4px 8px; border: 2px solid #ffffff;")
                 else:
-                    self.btn_apply_sub.setStyleSheet("background-color: #1e8449; color: white; font-weight: bold; padding: 6px; border: 3px solid #f39c12;")
+                    self.btn_apply_sub.setStyleSheet("background-color: #1e8449; color: white; font-weight: bold; padding: 4px 8px; border: 2px solid #f39c12;")
             except RuntimeError:
                 pass
         elif self.active_glow_button == 'yellow':
             if self.glow_state:
-                self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 6px 15px; border: 3px solid #ffffff;")
+                self.btn_add.setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; padding: 4px 10px; border: 2px solid #ffffff;")
             else:
-                self.btn_add.setStyleSheet("background-color: #b7950b; color: white; font-weight: bold; padding: 6px 15px; border: 3px solid #ffffff;")
+                self.btn_add.setStyleSheet("background-color: #b7950b; color: white; font-weight: bold; padding: 4px 10px; border: 2px solid #ffffff;")
 
     def populate_dropdown(self):
         self.material_dropdown.clear()
@@ -417,13 +480,14 @@ class BuilderWindow(QMainWindow):
         active_layers = [l for l in layers if not l.is_substrate]
         
         current_y = 650
+        
         for sub in substrate_layers:
             sub.setY(current_y)
-            current_y -= 55 
+            current_y -= (sub.rect().height() + 4) 
             
         for layer in active_layers:
             layer.setY(current_y)
-            current_y -= 55 
+            current_y -= (layer.rect().height() + 4) 
             
         self.current_drop_y = current_y
 
@@ -439,6 +503,7 @@ class BuilderWindow(QMainWindow):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             comment_text = dialog.get_comment()
             self.current_selected_layer.set_comment(comment_text)
+            self.reorganize_layers()
 
     def on_layer_selected(self):
         if self.is_loading: return
@@ -471,10 +536,10 @@ class BuilderWindow(QMainWindow):
                 if index >= 0:
                     self.substrate_combo.setCurrentIndex(index)
                 
-                self.form_layout.addRow("Tipo de Sustrato:", self.substrate_combo)
+                self.form_layout.addRow("Tipo:", self.substrate_combo)
                 
-                self.btn_apply_sub = QPushButton("✓ Confirmar Tipo de Sustrato")
-                self.btn_apply_sub.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 6px;")
+                self.btn_apply_sub = QPushButton("✓ Confirmar")
+                self.btn_apply_sub.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 4px 8px;")
                 self.btn_apply_sub.clicked.connect(lambda: self.apply_substrate_change(item))
                 self.form_layout.addRow(self.btn_apply_sub)
                 
@@ -484,11 +549,11 @@ class BuilderWindow(QMainWindow):
                 self.lbl_selected_mat.setText(f"<b>{item.name}</b>")
                 
                 spin_growth = QDoubleSpinBox()
-                spin_growth.setSuffix(" sec")
+                spin_growth.setSuffix(" s")
                 spin_growth.setMaximum(10000.0)
                 spin_growth.setValue(item.growth_time)
                 spin_growth.valueChanged.connect(lambda val, i=item: self.update_growth_time(i, val))
-                self.form_layout.addRow("Tiempo Total Crecimiento:", spin_growth)
+                self.form_layout.addRow("Tiempo (s):", spin_growth)
 
                 line = QFrame()
                 line.setFrameShape(QFrame.Shape.HLine)
@@ -498,6 +563,7 @@ class BuilderWindow(QMainWindow):
                 for el in item.elements:
                     element_box = QGroupBox(f"Celda: {el}")
                     elem_layout = QVBoxLayout()
+                    elem_layout.setContentsMargins(5, 5, 5, 5)
 
                     mode_layout = QHBoxLayout()
                     rb_continuo = QRadioButton("Continuo")
@@ -519,23 +585,24 @@ class BuilderWindow(QMainWindow):
 
                     widget_ciclo = QWidget()
                     layout_ciclo = QVBoxLayout(widget_ciclo)
+                    layout_ciclo.setContentsMargins(0,0,0,0)
                     
                     inputs_layout = QFormLayout()
                     spin_tshift = QDoubleSpinBox()
-                    spin_tshift.setSuffix(" sec")
+                    spin_tshift.setSuffix(" s")
                     spin_tshift.setValue(item.element_data[el]["t_shift"])
                     
                     spin_topen = QDoubleSpinBox()
-                    spin_topen.setSuffix(" sec")
+                    spin_topen.setSuffix(" s")
                     spin_topen.setValue(item.element_data[el]["t_open"])
                     
                     spin_tclose = QDoubleSpinBox()
-                    spin_tclose.setSuffix(" sec")
+                    spin_tclose.setSuffix(" s")
                     spin_tclose.setValue(item.element_data[el]["t_close"])
                     
-                    inputs_layout.addRow("T. Desplazamiento (Shift):", spin_tshift)
-                    inputs_layout.addRow("T. Apertura (Open):", spin_topen)
-                    inputs_layout.addRow("T. Cierre (Close):", spin_tclose)
+                    inputs_layout.addRow("Shift:", spin_tshift)
+                    inputs_layout.addRow("Open:", spin_topen)
+                    inputs_layout.addRow("Close:", spin_tclose)
                     layout_ciclo.addLayout(inputs_layout)
                     
                     t_shift = item.element_data[el]["t_shift"]
@@ -655,20 +722,22 @@ class BuilderWindow(QMainWindow):
 
         msg_box = QMessageBox(self)
         msg_box.setWindowTitle("Confirmación de Crecimiento")
-        msg_box.setText("<b>¡Receta lista para ser procesada!</b><br><br>Presiona [Enter] o confirma para abrir el Monitor Principal con la Línea de Tiempo.")
+        msg_box.setText("<b>¡Receta lista para ser procesada!</b><br><br>Presiona [Enter] o confirma para abrir el Monitor Principal con la Línea del Tiempo.")
         msg_box.setIcon(QMessageBox.Icon.Question)
+        msg_box.setStyleSheet(STYLE_SHEET)
         
         btn_yes = msg_box.addButton("Sí, Abrir Monitor", QMessageBox.ButtonRole.AcceptRole)
+        btn_yes.setStyleSheet("background-color: #27ae60; color: white; padding: 5px;")
         btn_no = msg_box.addButton("Cancelar", QMessageBox.ButtonRole.RejectRole)
+        btn_no.setStyleSheet("background-color: #e74c3c; color: white; padding: 5px;")
         msg_box.setDefaultButton(btn_yes)
         
         msg_box.exec()
 
         if msg_box.clickedButton() == btn_yes:
-            # Lanza el programa principal (main.py) pasándole el archivo json
             try:
                 subprocess.Popen([sys.executable, "main.py", json_filename])
-                self.close() # Cierra la ventana del diseñador
+                self.close()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"No se pudo iniciar main.py:\n{e}")
 
