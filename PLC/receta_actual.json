@@ -5,5 +5,64 @@
         "comentario": "",
         "tiempo_total_crecimiento_sec": 0.0,
         "parametros_celdas": {}
+    },
+    {
+        "paso": 2,
+        "material": "AlGaAs",
+        "comentario": "",
+        "tiempo_total_crecimiento_sec": 60.0,
+        "parametros_celdas": {
+            "Al": {
+                "mode": "Continuo"
+            },
+            "Ga": {
+                "mode": "Continuo"
+            },
+            "As": {
+                "mode": "Continuo"
+            }
+        }
+    },
+    {
+        "paso": 3,
+        "material": "AlAs",
+        "comentario": "",
+        "tiempo_total_crecimiento_sec": 60.0,
+        "parametros_celdas": {
+            "Al": {
+                "mode": "Continuo"
+            },
+            "As": {
+                "mode": "Continuo"
+            }
+        }
+    },
+    {
+        "paso": 4,
+        "material": "GaN",
+        "comentario": "",
+        "tiempo_total_crecimiento_sec": 60.0,
+        "parametros_celdas": {
+            "Ga": {
+                "mode": "Continuo"
+            },
+            "N": {
+                "mode": "Continuo"
+            }
+        }
+    },
+    {
+        "paso": 5,
+        "material": "AlN",
+        "comentario": "",
+        "tiempo_total_crecimiento_sec": 60.0,
+        "parametros_celdas": {
+            "Al": {
+                "mode": "Continuo"
+            },
+            "N": {
+                "mode": "Continuo"
+            }
+        }
     }
 ]
