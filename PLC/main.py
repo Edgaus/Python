@@ -2,6 +2,7 @@ import sys
 import json
 import subprocess
 import os
+import copy  # Necesario para crear copias seguras (búfer) de la receta
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QGroupBox, 
                              QProgressBar, QFileDialog, QMessageBox, QFrame,
@@ -10,7 +11,7 @@ from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
 # =========================================================================
-# HOJA DE ESTILOS GENERAL (ALTO CONTRASTE)
+# HOJA DE ESTILOS GENERAL (ALTO CONTRASTE + AVISOS CORREGIDOS)
 # =========================================================================
 MAIN_STYLE_SHEET = """
 QMainWindow {
@@ -53,6 +54,31 @@ QProgressBar::chunk {
 }
 
 /* ======================================================== */
+/* ESTILO ESPECÍFICO PARA AVISOS Y DIÁLOGOS (QMessageBox)   */
+/* ======================================================== */
+QMessageBox, QDialog {
+    background-color: #ffffff !important;
+}
+QMessageBox QLabel, QDialog QLabel {
+    color: #000000 !important;
+    font-size: 14px;
+    font-weight: normal;
+}
+QMessageBox QPushButton {
+    background-color: #0d2a52;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: bold;
+    min-width: 70px;
+}
+QMessageBox QPushButton:hover {
+    background-color: #204a87;
+}
+
+/* ======================================================== */
 /* COLOR DE TEXTO NEGRO FORZADO Y TAMAÑO PARA SPINBOXES     */
 /* ======================================================== */
 QDoubleSpinBox, QSpinBox, QDoubleSpinBox QLineEdit, QSpinBox QLineEdit {
@@ -63,7 +89,7 @@ QDoubleSpinBox, QSpinBox, QDoubleSpinBox QLineEdit, QSpinBox QLineEdit {
     padding: 2px 18px 2px 4px;
     font-size: 13px;
     font-weight: bold;
-    min-width: 60px;
+    min-width: 65px;
     min-height: 24px;
 }
 QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
@@ -128,8 +154,7 @@ class TimelineWidget(QWidget):
             self.total_recipe_time = max(1.0, self.total_recipe_time)
         else:
             self.total_recipe_time = 1.0
-            
-        self.update()
+            self.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -262,13 +287,16 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(MAIN_STYLE_SHEET)
 
         self.recipe_data = []
+        
+        # Búfer temporal para guardar modificaciones hasta que se confirmen
+        self.temp_step_data = None 
+
         self.current_step_index = 0
         self.current_step_time = 0.0
         self.is_running = False
         self.is_paused = False
         self.is_unlocked = False
 
-        # Estado visual de las celdas para evitar redibujados continuos
         self.last_drawn_step_index = -1
         self.last_drawn_lock_state = None
         self.cell_widgets = {}
@@ -370,9 +398,21 @@ class MainWindow(QMainWindow):
         """)
         self.btn_unlock.clicked.connect(self.toggle_unlock_mode)
 
+        # NUEVO: Botón de confirmar cambios
+        self.btn_confirm = QPushButton("✔️ Confirmar Cambios")
+        self.btn_confirm.setStyleSheet("""
+            QPushButton {
+                background: #3498db; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none;
+            }
+            QPushButton:hover { background: #2980b9; }
+        """)
+        self.btn_confirm.setVisible(False)
+        self.btn_confirm.clicked.connect(self.apply_pending_changes)
+
         botones.addWidget(self.btn_load)
         botones.addWidget(self.btn_builder)
         botones.addWidget(self.btn_unlock)
+        botones.addWidget(self.btn_confirm)
         botones.addStretch()
 
         # Botones Principales de Control
@@ -412,14 +452,34 @@ class MainWindow(QMainWindow):
 
         self.lbl_material = QLabel("<b>Material:</b> Ninguno")
         self.lbl_step = QLabel("<b>Etapa:</b> - / -")
-        self.lbl_time = QLabel("<b>Tiempo:</b> 0.0s / 0.0s")
+        
+        self.time_container = QWidget()
+        self.time_layout = QHBoxLayout(self.time_container)
+        self.time_layout.setContentsMargins(0, 0, 0, 0)
+        self.time_layout.setSpacing(4)
+
+        self.lbl_time_cur = QLabel("<b>Tiempo:</b> 0.0s / ")
+        self.lbl_time_total_static = QLabel("0.0s")
+        
+        self.spin_total_step_time = QDoubleSpinBox()
+        self.spin_total_step_time.setRange(1.0, 99999.0)
+        self.spin_total_step_time.setDecimals(1)
+        self.spin_total_step_time.setSuffix("s")
+        self.spin_total_step_time.setToolTip("Modificar tiempo total de esta etapa")
+        self.spin_total_step_time.setVisible(False)
+        self.spin_total_step_time.valueChanged.connect(self.on_step_total_time_changed)
+
+        self.time_layout.addWidget(self.lbl_time_cur)
+        self.time_layout.addWidget(self.lbl_time_total_static)
+        self.time_layout.addWidget(self.spin_total_step_time)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         self.progress_bar.setMinimumWidth(300)
 
         self.grid.addWidget(self.lbl_material, 0, 0)
         self.grid.addWidget(self.lbl_step, 0, 1)
-        self.grid.addWidget(self.lbl_time, 0, 2)
+        self.grid.addWidget(self.time_container, 0, 2)
         self.grid.addWidget(self.progress_bar, 0, 3)
 
         self.lbl_comment = QLabel("<b>Comentario:</b> <i>Ninguno</i>")
@@ -435,19 +495,62 @@ class MainWindow(QMainWindow):
         layout.addWidget(right_panel)
 
     # =========================================================================
-    # LÓGICA DE CONTROL Y RECETAS
+    # LÓGICA DE CONTROL Y NORMALIZACIÓN DE RECETAS
     # =========================================================================
+    def normalize_step(self, step):
+        material = step.get("material") or step.get("name") or "Desconocido"
+        
+        if "tiempo_total_crecimiento_sec" in step:
+            growth_time = float(step["tiempo_total_crecimiento_sec"])
+        elif "growth_time" in step:
+            growth_time = float(step["growth_time"])
+        else:
+            growth_time = 0.0 if ("Substrate" in material or step.get("is_substrate", False)) else 60.0
+            
+        comment = step.get("comentario", step.get("comment", ""))
+        raw_cells = step.get("parametros_celdas") or step.get("element_data") or {}
+        
+        normalized_cells = {}
+        for el, p in raw_cells.items():
+            mode = p.get("mode", "Continuo")
+            normalized_cells[el] = {
+                "mode": mode,
+                "t_shift": float(p.get("t_shift", 0.0)),
+                "t_open": float(p.get("t_open", 5.0)),
+                "t_close": float(p.get("t_close", 5.0)),
+                "manual_is_open": p.get("manual_is_open", True)
+            }
+            
+        return {
+            "material": material,
+            "tiempo_total_crecimiento_sec": growth_time,
+            "comentario": comment,
+            "parametros_celdas": normalized_cells
+        }
+
     def toggle_unlock_mode(self):
         self.is_unlocked = not self.is_unlocked
         if self.is_unlocked:
-            self.btn_unlock.setText("🔓 Desbloqueado")
+            # Crear búfer temporal de los datos de la etapa actual
+            if self.recipe_data and self.current_step_index < len(self.recipe_data):
+                self.temp_step_data = copy.deepcopy(self.recipe_data[self.current_step_index])
+            else:
+                self.temp_step_data = None
+
+            self.btn_unlock.setText("🔓 Modo Edición")
             self.btn_unlock.setStyleSheet("""
                 QPushButton {
                     background: #27ae60; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none;
                 }
                 QPushButton:hover { background: #2ecc71; }
             """)
+            self.btn_confirm.setVisible(True)
+            self.lbl_time_total_static.setVisible(False)
+            self.spin_total_step_time.setVisible(True)
         else:
+            # Si se vuelve a bloquear sin confirmar, se descartan los cambios del búfer
+            self.temp_step_data = None
+
             self.btn_unlock.setText("🔒 Bloqueado")
             self.btn_unlock.setStyleSheet("""
                 QPushButton {
@@ -455,10 +558,42 @@ class MainWindow(QMainWindow):
                 }
                 QPushButton:hover { background: #c0392b; }
             """)
+            self.btn_confirm.setVisible(False)
+            self.lbl_time_total_static.setVisible(True)
+            self.spin_total_step_time.setVisible(False)
         
-        # Al cambiar el bloqueo forzamos a reconstruir la UI para mostrar u ocultar controles
         if self.recipe_data and self.current_step_index < len(self.recipe_data):
+            self.update_step_display()
             self.refresh_cells_ui(self.recipe_data[self.current_step_index], force_rebuild=True)
+
+    def on_step_total_time_changed(self, new_val):
+        # AHORA: Modifica SOLO el búfer temporal, NO la receta activa ni la línea de tiempo
+        if self.temp_step_data:
+            self.temp_step_data["tiempo_total_crecimiento_sec"] = float(new_val)
+
+    def apply_pending_changes(self):
+        """Inyecta los cambios del búfer a la receta real al presionar confirmar"""
+        if self.is_unlocked and self.temp_step_data and self.recipe_data:
+            # 1. Copiar datos del búfer a la receta activa
+            self.recipe_data[self.current_step_index] = copy.deepcopy(self.temp_step_data)
+            
+            # 2. Forzar actualización de la línea de tiempo (Gantt)
+            global_time = 0.0
+            for i in range(self.current_step_index):
+                global_time += float(self.recipe_data[i].get("tiempo_total_crecimiento_sec", 0))
+            global_time += self.current_step_time
+            self.timeline.set_recipe_data(self.recipe_data, global_time)
+            
+            # 3. Sincronizar etiquetas y barras visuales
+            total_time = float(self.recipe_data[self.current_step_index].get("tiempo_total_crecimiento_sec", 60.0))
+            self.lbl_time_total_static.setText(f"{total_time:.1f}s")
+            pct = int((self.current_step_time / total_time) * 100) if total_time > 0 else 100
+            self.progress_bar.setValue(min(100, pct))
+            
+            # 4. Forzar un renderizado limpio de las celdas
+            self.refresh_cells_ui(self.recipe_data[self.current_step_index], force_rebuild=True)
+            
+            QMessageBox.information(self, "Éxito", "Los cambios han sido inyectados en la receta activa exitosamente.")
 
     def select_recipe_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Cargar Receta MBE", "", "Archivos JSON (*.json)")
@@ -468,13 +603,13 @@ class MainWindow(QMainWindow):
     def load_recipe_from_file(self, file_path):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+                raw_data = json.load(f)
             
-            if not isinstance(data, list) or len(data) == 0:
+            if not isinstance(raw_data, list) or len(raw_data) == 0:
                 QMessageBox.warning(self, "Advertencia", "El archivo no contiene una receta válida.")
                 return
 
-            self.recipe_data = data
+            self.recipe_data = [self.normalize_step(s) for s in raw_data]
             self.reset_process_to_first_valid_layer()
             QMessageBox.information(self, "Éxito", f"Receta '{os.path.basename(file_path)}' cargada correctamente.")
         except Exception as e:
@@ -483,7 +618,7 @@ class MainWindow(QMainWindow):
     def reset_process_to_first_valid_layer(self):
         self.current_step_time = 0.0
         self.current_step_index = 0
-        self.last_drawn_step_index = -1  # Forzar renderizado desde 0
+        self.last_drawn_step_index = -1
         
         while self.current_step_index < len(self.recipe_data):
             step_time = float(self.recipe_data[self.current_step_index].get("tiempo_total_crecimiento_sec", 0))
@@ -500,7 +635,8 @@ class MainWindow(QMainWindow):
         if not self.recipe_data or self.current_step_index >= len(self.recipe_data):
             self.lbl_material.setText("<b>Material:</b> Finalizado")
             self.lbl_step.setText("<b>Etapa:</b> - / -")
-            self.lbl_time.setText("<b>Tiempo:</b> 0.0s / 0.0s")
+            self.lbl_time_cur.setText("<b>Tiempo:</b> 0.0s / ")
+            self.lbl_time_total_static.setText("0.0s")
             self.lbl_comment.setText("<b>Comentario:</b> <i>Proceso finalizado</i>")
             self.progress_bar.setValue(100)
             
@@ -516,9 +652,20 @@ class MainWindow(QMainWindow):
         total_time = float(step.get("tiempo_total_crecimiento_sec", 60.0))
         comentario = step.get("comentario", "")
 
+        # Refrescar el búfer de cambios si cambiamos de capa por tiempo natural estando desbloqueados
+        if self.is_unlocked and (self.temp_step_data is None or self.last_drawn_step_index != self.current_step_index):
+            self.temp_step_data = copy.deepcopy(step)
+
         self.lbl_material.setText(f"<b>Material:</b> <font color='#0d2a52'>{material}</font>")
         self.lbl_step.setText(f"<b>Etapa:</b> {self.current_step_index + 1} de {len(self.recipe_data)}")
-        self.lbl_time.setText(f"<b>Tiempo:</b> {self.current_step_time:.1f}s / {total_time:.1f}s")
+        self.lbl_time_cur.setText(f"<b>Tiempo:</b> {self.current_step_time:.1f}s / ")
+        self.lbl_time_total_static.setText(f"{total_time:.1f}s")
+
+        # Evitar sobreescribir el SpinBox si el usuario lo está editando
+        if not self.is_unlocked:
+            self.spin_total_step_time.blockSignals(True)
+            self.spin_total_step_time.setValue(total_time)
+            self.spin_total_step_time.blockSignals(False)
         
         if comentario.strip():
             self.lbl_comment.setText(f"<b>Comentario:</b> <i>{comentario}</i>")
@@ -537,7 +684,7 @@ class MainWindow(QMainWindow):
         self.refresh_cells_ui(step)
 
     # -------------------------------------------------------------------------
-    # MOTOR DE INTERFAZ OPTIMIZADO (No destruye widgets mientras el programa corre)
+    # MOTOR DE INTERFAZ OPTIMIZADO PARA CELDAS Y BÚFER TEMPORAL
     # -------------------------------------------------------------------------
     def refresh_cells_ui(self, step, force_rebuild=False):
         if not step:
@@ -547,7 +694,6 @@ class MainWindow(QMainWindow):
             self.cell_widgets.clear()
             return
 
-        # FASE 1: CONSTRUCCIÓN (Sólo ocurre 1 vez por etapa o si cambia el modo de bloqueo)
         if force_rebuild or self.last_drawn_step_index != self.current_step_index or self.last_drawn_lock_state != self.is_unlocked:
             
             while self.cells_layout.count():
@@ -586,24 +732,31 @@ class MainWindow(QMainWindow):
 
                     if self.is_unlocked:
                         if mode == "Continuo":
-                            # Botón de Toggle para modo continuo
                             btn_toggle = QPushButton()
                             btn_toggle.setStyleSheet("border: none;")
                             
-                            def make_toggle(cell_params):
+                            def make_toggle(cell_key):
                                 def toggle():
-                                    current = cell_params.get("manual_is_open", True)
-                                    cell_params["manual_is_open"] = not current
-                                    # Forzar actualización visual inmediata
-                                    self.refresh_cells_ui(self.recipe_data[self.current_step_index]) 
+                                    if self.temp_step_data:
+                                        # Alterar estado en BÚFER
+                                        current = self.temp_step_data["parametros_celdas"][cell_key].get("manual_is_open", True)
+                                        self.temp_step_data["parametros_celdas"][cell_key]["manual_is_open"] = not current
+                                        
+                                        # Refrescar vista del botón
+                                        btn = self.cell_widgets[cell_key]["toggle_btn"]
+                                        if self.temp_step_data["parametros_celdas"][cell_key]["manual_is_open"]:
+                                            btn.setText("🔴 Pendiente: Cerrar")
+                                            btn.setStyleSheet("background-color: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
+                                        else:
+                                            btn.setText("🟢 Pendiente: Abrir")
+                                            btn.setStyleSheet("background-color: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
                                 return toggle
                                 
-                            btn_toggle.clicked.connect(make_toggle(params))
+                            btn_toggle.clicked.connect(make_toggle(el))
                             widget_refs["toggle_btn"] = btn_toggle
                             flayout.addWidget(btn_toggle)
 
                         elif mode == "Ciclo":
-                            # Controles de Tiempo interactivos para Ciclo
                             form_layout = QHBoxLayout()
                             form_layout.setContentsMargins(0, 0, 0, 0)
                             form_layout.setSpacing(4)
@@ -628,9 +781,9 @@ class MainWindow(QMainWindow):
 
                             def make_callback(cell_key, param_key):
                                 def on_val_changed(val):
-                                    if self.recipe_data and self.current_step_index < len(self.recipe_data):
-                                        self.recipe_data[self.current_step_index]["parametros_celdas"][cell_key][param_key] = float(val)
-                                        self.timeline.update()
+                                    # Alterar parámetros cíclicos en BÚFER
+                                    if self.temp_step_data:
+                                        self.temp_step_data["parametros_celdas"][cell_key][param_key] = float(val)
                                 return on_val_changed
 
                             spin_s.valueChanged.connect(make_callback(el, "t_shift"))
@@ -646,7 +799,6 @@ class MainWindow(QMainWindow):
                             
                             flayout.addLayout(form_layout)
                     else:
-                        # Vista Bloqueada (Estática)
                         if mode == "Ciclo":
                             t_shift = float(params.get("t_shift", 0.0))
                             t_open = float(params.get("t_open", 5.0))
@@ -664,8 +816,9 @@ class MainWindow(QMainWindow):
             self.last_drawn_step_index = self.current_step_index
             self.last_drawn_lock_state = self.is_unlocked
 
-
-        # FASE 2: ACTUALIZACIÓN VISUAL (Ocurre cada 100ms para mantener vivo el monitor)
+        # =======================================================
+        # FASE 2: ACTUALIZACIÓN VISUAL (ESTADO REAL DEL EQUIPO)
+        # =======================================================
         cells = step.get("parametros_celdas", {})
         for el, params in cells.items():
             if el not in self.cell_widgets: continue
@@ -673,8 +826,9 @@ class MainWindow(QMainWindow):
             mode = params.get("mode", "Continuo")
             is_open = True
             
+            # El recuadro maestro y la etiqueta principal SIEMPRE leen del estado REAL (`recipe_data`), 
+            # para que el usuario sepa qué está haciendo la máquina mientras decide si confirma los cambios.
             if mode == "Continuo":
-                # Respetamos el flag de control manual insertado en tiempo real
                 is_open = params.get("manual_is_open", True) 
             elif mode == "Ciclo":
                 t_shift = float(params.get("t_shift", 0.0))
@@ -694,16 +848,24 @@ class MainWindow(QMainWindow):
             self.cell_widgets[el]["status_lbl"].setStyleSheet(f"border: none; color: {color_str}; font-size: 16px; font-weight: bold;")
             self.cell_widgets[el]["frame"].setStyleSheet(f"background: white; border: 2px solid {color_str}; border-radius: 6px; padding: 5px;")
             
-            # Si el botón toggle existe, actualizar su aspecto
+            # El botón de la celda continua, por otro lado, refleja el estado en memoria (Búfer temporal)
             if "toggle_btn" in self.cell_widgets[el]:
                 btn = self.cell_widgets[el]["toggle_btn"]
-                if is_open:
-                    btn.setText("🔴 Forzar Cierre")
-                    btn.setStyleSheet("background-color: #e53935; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
+                
+                # Leemos la intención actual desde el búfer
+                if self.is_unlocked and self.temp_step_data and el in self.temp_step_data["parametros_celdas"]:
+                    intent_is_open = self.temp_step_data["parametros_celdas"][el].get("manual_is_open", True)
                 else:
-                    btn.setText("🟢 Reabrir Celda")
-                    btn.setStyleSheet("background-color: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
+                    intent_is_open = is_open
 
+                # Solo actualiza el estilo si no está en estado "Pendiente" (para no borrar el color naranja)
+                if "Pendiente" not in btn.text():
+                    if intent_is_open:
+                        btn.setText("🔴 Preparar Cierre")
+                        btn.setStyleSheet("background-color: #e53935; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
+                    else:
+                        btn.setText("🟢 Preparar Apertura")
+                        btn.setStyleSheet("background-color: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
 
     def start_growth(self):
         if not self.recipe_data:

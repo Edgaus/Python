@@ -1,67 +1,80 @@
 [
     {
-        "paso": 1,
-        "material": "Silicon Substrate",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 0.0,
-        "parametros_celdas": {}
+        "name": "Silicon Substrate",
+        "is_substrate": true,
+        "growth_time": 0.0,
+        "comment": "",
+        "element_data": {}
     },
     {
-        "paso": 2,
-        "material": "AlGaAs",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 60.0,
-        "parametros_celdas": {
-            "Al": {
-                "mode": "Continuo"
+        "name": "InGaAs",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "In": {
+                "mode": "Ciclo",
+                "t_shift": 2.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             },
             "Ga": {
-                "mode": "Continuo"
+                "mode": "Ciclo",
+                "t_shift": 2.0,
+                "t_open": 5.0,
+                "t_close": 9.0
             },
             "As": {
-                "mode": "Continuo"
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             }
         }
     },
     {
-        "paso": 3,
-        "material": "AlAs",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 60.0,
-        "parametros_celdas": {
+        "name": "AlN",
+        "is_substrate": false,
+        "growth_time": 23.0,
+        "comment": "",
+        "element_data": {
             "Al": {
-                "mode": "Continuo"
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             },
-            "As": {
-                "mode": "Continuo"
+            "N": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             }
         }
     },
     {
-        "paso": 4,
-        "material": "GaN",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 60.0,
-        "parametros_celdas": {
+        "name": "InGaN",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "In": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
+            },
             "Ga": {
-                "mode": "Continuo"
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             },
             "N": {
-                "mode": "Continuo"
-            }
-        }
-    },
-    {
-        "paso": 5,
-        "material": "AlN",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 60.0,
-        "parametros_celdas": {
-            "Al": {
-                "mode": "Continuo"
-            },
-            "N": {
-                "mode": "Continuo"
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             }
         }
     }

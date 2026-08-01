@@ -14,7 +14,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QFont, QPainter
 from PyQt6.QtWidgets import QStyle
 
 # ==========================================
-# HOJA DE ESTILOS GLOBAL (LIGHT THEME - CONTRASTE ALTO)
+# HOJA DE ESTILOS GLOBAL (CONTRASTE Y AVISOS CORREGIDOS)
 # ==========================================
 STYLE_SHEET = """
 QMainWindow {
@@ -52,7 +52,32 @@ QComboBox, QTextEdit, QLineEdit {
 }
 
 /* ======================================================== */
-/* COLOR DE TEXTO NEGRO FORZADO PARA NÚMEROS Y SPINBOXES    */
+/* ESTILO ESPECÍFICO PARA AVISOS Y DIÁLOGOS (QMessageBox)   */
+/* ======================================================== */
+QMessageBox, QDialog {
+    background-color: #ffffff !important;
+}
+QMessageBox QLabel, QDialog QLabel {
+    color: #000000 !important;
+    font-size: 14px;
+    font-weight: normal;
+}
+QMessageBox QPushButton {
+    background-color: #0d2a52;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: bold;
+    min-width: 70px;
+}
+QMessageBox QPushButton:hover {
+    background-color: #204a87;
+}
+
+/* ======================================================== */
+/* COLOR DE TEXTO NEGRO FORZADO Y TAMAÑO PARA SPINBOXES     */
 /* ======================================================== */
 QDoubleSpinBox, QSpinBox, QDoubleSpinBox QLineEdit, QSpinBox QLineEdit {
     background-color: #ffffff;
