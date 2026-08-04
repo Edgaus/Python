@@ -2,7 +2,9 @@ import sys
 import json
 import subprocess
 import os
-import copy  # Necesario para crear copias seguras (búfer) de la receta
+import copy
+import csv
+import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QGroupBox, 
                              QProgressBar, QFileDialog, QMessageBox, QFrame,
@@ -11,115 +13,43 @@ from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
 # =========================================================================
-# HOJA DE ESTILOS GENERAL (ALTO CONTRASTE + AVISOS CORREGIDOS)
+# HOJA DE ESTILOS GENERAL
 # =========================================================================
 MAIN_STYLE_SHEET = """
-QMainWindow {
-    background: #dbe9f6;
-}
-QWidget {
-    color: #000000;
-}
-QLabel {
-    font-size: 14px;
-    color: #000000;
-}
+QMainWindow { background: #dbe9f6; }
+QWidget { color: #000000; }
+QLabel { font-size: 14px; color: #000000; }
 QGroupBox {
-    background: white;
-    border: 1px solid #a0a0a0;
-    border-radius: 8px;
-    margin-top: 15px;
-    font-size: 15px;
-    font-weight: bold;
-    color: #0d2a52;
+    background: white; border: 1px solid #a0a0a0; border-radius: 8px;
+    margin-top: 15px; font-size: 15px; font-weight: bold; color: #0d2a52;
 }
-QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 12px;
-    padding: 0 5px;
-    color: #0d2a52;
-}
+QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 5px; color: #0d2a52; }
 QProgressBar {
-    border: 1px solid #7f8c8d;
-    border-radius: 4px;
-    text-align: center;
-    color: #000000;
-    font-weight: bold;
-    background-color: #ecf0f1;
-    height: 18px;
+    border: 1px solid #7f8c8d; border-radius: 4px; text-align: center;
+    color: #000000; font-weight: bold; background-color: #ecf0f1; height: 18px;
 }
-QProgressBar::chunk {
-    background-color: #3498db;
-    border-radius: 3px;
-}
-
-/* ======================================================== */
-/* ESTILO ESPECÍFICO PARA AVISOS Y DIÁLOGOS (QMessageBox)   */
-/* ======================================================== */
-QMessageBox, QDialog {
-    background-color: #ffffff !important;
-}
-QMessageBox QLabel, QDialog QLabel {
-    color: #000000 !important;
-    font-size: 14px;
-    font-weight: normal;
-}
+QProgressBar::chunk { background-color: #3498db; border-radius: 3px; }
+QMessageBox, QDialog { background-color: #ffffff !important; }
+QMessageBox QLabel, QDialog QLabel { color: #000000 !important; font-size: 14px; font-weight: normal; }
 QMessageBox QPushButton {
-    background-color: #0d2a52;
-    color: #ffffff !important;
-    border: none;
-    border-radius: 5px;
-    padding: 6px 16px;
-    font-size: 13px;
-    font-weight: bold;
-    min-width: 70px;
+    background-color: #0d2a52; color: #ffffff !important; border: none;
+    border-radius: 5px; padding: 6px 16px; font-size: 13px; font-weight: bold; min-width: 70px;
 }
-QMessageBox QPushButton:hover {
-    background-color: #204a87;
-}
-
-/* ======================================================== */
-/* COLOR DE TEXTO NEGRO FORZADO Y TAMAÑO PARA SPINBOXES     */
-/* ======================================================== */
+QMessageBox QPushButton:hover { background-color: #204a87; }
 QDoubleSpinBox, QSpinBox, QDoubleSpinBox QLineEdit, QSpinBox QLineEdit {
-    background-color: #ffffff;
-    color: #000000 !important;
-    border: 1px solid #a0a0a0;
-    border-radius: 4px;
-    padding: 2px 18px 2px 4px;
-    font-size: 13px;
-    font-weight: bold;
-    min-width: 65px;
-    min-height: 24px;
+    background-color: #ffffff; color: #000000 !important; border: 1px solid #a0a0a0;
+    border-radius: 4px; padding: 2px 18px 2px 4px; font-size: 13px; font-weight: bold;
+    min-width: 65px; min-height: 24px;
 }
-QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    width: 15px;
-    background-color: #e0e0e0;
-    border-left: 1px solid #a0a0a0;
-}
-QDoubleSpinBox::up-button {
-    border-bottom: 1px solid #a0a0a0;
-    border-top-right-radius: 3px;
-}
-QDoubleSpinBox::down-button {
-    border-bottom-right-radius: 3px;
-}
-QDoubleSpinBox::up-arrow {
-    width: 0; height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 4px solid #000000;
-}
-QDoubleSpinBox::down-arrow {
-    width: 0; height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 4px solid #000000;
-}
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 15px; background-color: #e0e0e0; border-left: 1px solid #a0a0a0; }
+QDoubleSpinBox::up-button { border-bottom: 1px solid #a0a0a0; border-top-right-radius: 3px; }
+QDoubleSpinBox::down-button { border-bottom-right-radius: 3px; }
+QDoubleSpinBox::up-arrow { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 4px solid #000000; }
+QDoubleSpinBox::down-arrow { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #000000; }
 """
 
 # =========================================================================
-# WIDGET GRÁFICO DE LÍNEA DE TIEMPO / GANTT (GLOBAL)
+# WIDGET GRÁFICO DE LÍNEA DE TIEMPO (CON RASTRO TIPO KARAOKE)
 # =========================================================================
 class TimelineWidget(QWidget):
     def __init__(self, parent=None):
@@ -128,6 +58,8 @@ class TimelineWidget(QWidget):
         self.recipe_data = None
         self.global_time = 0.0
         self.total_recipe_time = 1.0
+        
+        self.active_cells = {}
         
         self.element_colors = {
             "Ga": QColor(50, 120, 220),
@@ -138,23 +70,22 @@ class TimelineWidget(QWidget):
         }
 
     def format_time_label(self, seconds):
-        if self.total_recipe_time < 120:
-            return f"{seconds:.1f}s"
-        elif self.total_recipe_time < 7200:
-            return f"{seconds/60:.1f}m"
-        else:
-            return f"{seconds/3600:.1f}h"
+        if self.total_recipe_time < 120: return f"{seconds:.1f}s"
+        elif self.total_recipe_time < 7200: return f"{seconds/60:.1f}m"
+        else: return f"{seconds/3600:.1f}h"
 
     def set_recipe_data(self, recipe_data, global_time):
         self.recipe_data = recipe_data
         self.global_time = global_time
-        
         if self.recipe_data:
-            self.total_recipe_time = sum(float(s.get("tiempo_total_crecimiento_sec", 0)) for s in self.recipe_data)
-            self.total_recipe_time = max(1.0, self.total_recipe_time)
+            self.total_recipe_time = max(1.0, sum(float(s.get("tiempo_total_crecimiento_sec", 0)) for s in self.recipe_data))
         else:
             self.total_recipe_time = 1.0
-            self.update()
+        self.update()
+
+    def set_active_cells(self, active_dict):
+        self.active_cells = active_dict
+        self.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -187,39 +118,51 @@ class TimelineWidget(QWidget):
         all_cells = sorted(list(all_cells))
 
         num_cells = len(all_cells)
-        if num_cells == 0:
-            p.setPen(QPen(QColor("#7f8c8d")))
-            p.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-            p.drawText(QRectF(left, top, width, draw_h), Qt.AlignmentFlag.AlignCenter, 
-                       "La receta no contiene celdas activas (Sólo sustrato)")
-            return
+        if num_cells == 0: return
 
         row_h = draw_h / num_cells
         font = QFont("Arial", 11, QFont.Weight.Bold)
         p.setFont(font)
 
+        # Rejilla de tiempo
         p.setPen(QPen(QColor(200, 200, 200), 1, Qt.PenStyle.DashLine))
         num_ticks = 5
         for i in range(num_ticks + 1):
             x_pos = left + (i / num_ticks) * width
             t_val = (i / num_ticks) * self.total_recipe_time
             p.drawLine(int(x_pos), top, int(x_pos), bottom)
-            
             p.setPen(QPen(Qt.GlobalColor.black))
             p.setFont(QFont("Arial", 9))
-            lbl_time = self.format_time_label(t_val)
-            p.drawText(int(x_pos) - 20, bottom + 15, 40, 15, Qt.AlignmentFlag.AlignCenter, lbl_time)
+            p.drawText(int(x_pos) - 20, bottom + 15, 40, 15, Qt.AlignmentFlag.AlignCenter, self.format_time_label(t_val))
             p.setPen(QPen(QColor(200, 200, 200), 1, Qt.PenStyle.DashLine))
+
+        playhead_x = left + (min(self.global_time, self.total_recipe_time) / self.total_recipe_time) * width
 
         y_cursor = top
         for cell_name in all_cells:
-            p.setPen(QPen(Qt.GlobalColor.black))
-            p.setFont(font)
-            p.drawText(15, int(y_cursor + row_h/2 + 5), f"Celda {cell_name}")
+            is_active_now = self.active_cells.get(cell_name, False)
+            
+            if is_active_now:
+                p.setPen(QPen(QColor("#27ae60")))
+                p.setFont(QFont("Arial", 11, QFont.Weight.ExtraBold))
+                p.drawText(15, int(y_cursor + row_h/2 + 5), f"▶ {cell_name} (ON)")
+            else:
+                p.setPen(QPen(Qt.GlobalColor.black))
+                p.setFont(font)
+                p.drawText(15, int(y_cursor + row_h/2 + 5), f"Celda {cell_name}")
 
             color = self.element_colors.get(cell_name, QColor(100, 100, 100))
             bar_y = y_cursor + row_h * 0.3
             bar_h = row_h * 0.4
+
+            def draw_trail_glow(start_x, end_x):
+                if playhead_x > start_x:
+                    glow_end = min(end_x, playhead_x)
+                    glow_color = QColor(color)
+                    glow_color.setAlpha(90)
+                    p.setPen(Qt.PenStyle.NoPen)
+                    p.setBrush(QBrush(glow_color))
+                    p.drawRect(QRectF(start_x, y_cursor + 2, glow_end - start_x, row_h - 4))
 
             current_start_t = 0.0
             
@@ -234,9 +177,11 @@ class TimelineWidget(QWidget):
                     
                     if mode == "Continuo":
                         block_w = (step_duration / self.total_recipe_time) * width
+                        x_end = x_start + block_w
                         p.fillRect(QRectF(x_start, bar_y, block_w, bar_h), color)
                         p.setPen(Qt.GlobalColor.black)
                         p.drawRect(QRectF(x_start, bar_y, block_w, bar_h))
+                        draw_trail_glow(x_start, x_end)
                     else:
                         block_w = (step_duration / self.total_recipe_time) * width
                         p.fillRect(QRectF(x_start, bar_y, block_w, bar_h), QColor(220, 220, 220))
@@ -251,30 +196,31 @@ class TimelineWidget(QWidget):
                             while t_curr < step_duration:
                                 open_start = t_curr + t_shift
                                 open_end = min(open_start + t_open, step_duration)
-                                
                                 if open_start < step_duration:
                                     x1 = left + ((current_start_t + open_start) / self.total_recipe_time) * width
                                     x2 = left + ((current_start_t + open_end) / self.total_recipe_time) * width
-                                    
                                     p.fillRect(QRectF(x1, bar_y, max(1.0, x2 - x1), bar_h), color)
                                     p.setPen(Qt.GlobalColor.black)
                                     p.drawRect(QRectF(x1, bar_y, max(1.0, x2 - x1), bar_h))
+                                    draw_trail_glow(x1, x2)
                                 t_curr += period
 
                 current_start_t += step_duration
+
+            if self.total_recipe_time > 0 and is_active_now:
+                p.setPen(Qt.PenStyle.NoPen)
+                p.setBrush(QBrush(color))
+                p.drawEllipse(QRectF(playhead_x - 6, bar_y + bar_h/2 - 6, 12, 12))
 
             p.setPen(QPen(QColor(200, 200, 200)))
             p.drawLine(left, int(y_cursor + row_h), right, int(y_cursor + row_h))
             y_cursor += row_h
 
         if self.total_recipe_time > 0:
-            playhead_x = left + (min(self.global_time, self.total_recipe_time) / self.total_recipe_time) * width
             p.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DashLine))
             p.drawLine(int(playhead_x), top - 10, int(playhead_x), bottom + 10)
-            
             p.setFont(QFont("Arial", 10, QFont.Weight.Bold))
             p.drawText(int(playhead_x) - 20, top - 15, "Ahora")
-
 
 # =========================================================================
 # VENTANA PRINCIPAL
@@ -287,12 +233,10 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(MAIN_STYLE_SHEET)
 
         self.recipe_data = []
-        
-        # Búfer temporal para guardar modificaciones hasta que se confirmen
         self.temp_step_data = None 
-
         self.current_step_index = 0
         self.current_step_time = 0.0
+        
         self.is_running = False
         self.is_paused = False
         self.is_unlocked = False
@@ -300,13 +244,13 @@ class MainWindow(QMainWindow):
         self.last_drawn_step_index = -1
         self.last_drawn_lock_state = None
         self.cell_widgets = {}
+        self.history_log = []
 
         self.process_timer = QTimer(self)
         self.process_timer.setInterval(100)
         self.process_timer.timeout.connect(self.on_process_tick)
 
         self.buildUI()
-
         if recipe_path and os.path.exists(recipe_path):
             self.load_recipe_from_file(recipe_path)
 
@@ -321,31 +265,14 @@ class MainWindow(QMainWindow):
         sidebar.setObjectName("Sidebar")
         sidebar.setFixedWidth(220)
         sidebar.setStyleSheet("""
-            QFrame#Sidebar {
-                background: #0d2a52;
-                color: white;
-            }
-            QFrame#Sidebar QPushButton {
-                background: transparent;
-                border: none;
-                text-align: left;
-                padding: 12px;
-                color: white;
-                font-size: 15px;
-                font-weight: bold;
-            }
-            QFrame#Sidebar QPushButton:hover {
-                background: #204a87;
-                border-left: 4px solid #3498db;
-            }
-            QFrame#Sidebar QLabel {
-                color: white;
-            }
+            QFrame#Sidebar { background: #0d2a52; color: white; }
+            QFrame#Sidebar QPushButton { background: transparent; border: none; text-align: left; padding: 12px; color: white; font-size: 15px; font-weight: bold; }
+            QFrame#Sidebar QPushButton:hover { background: #204a87; border-left: 4px solid #3498db; }
+            QFrame#Sidebar QLabel { color: white; }
         """)
 
         sideLayout = QVBoxLayout(sidebar)
         sideLayout.setContentsMargins(15, 20, 15, 20)
-
         title = QLabel("MBE CONTROL")
         title.setStyleSheet("font-size: 22px; font-weight: bold; margin-bottom: 20px;")
         sideLayout.addWidget(title)
@@ -362,23 +289,16 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout(right_panel)
         main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Título
         titulo = QLabel("Programa de crecimiento")
         titulo.setStyleSheet("font-size: 26px; font-weight: bold; color: #0d2a52;")
         main_layout.addWidget(titulo)
 
-        # Timeline
         self.timeline = TimelineWidget()
         main_layout.addWidget(self.timeline)
 
-        # Botones de Acción
         botones = QHBoxLayout()
-        
         btn_style_small = """
-            QPushButton {
-                background: white; border: 1px solid #7f8c8d; color: #333; 
-                border-radius: 6px; padding: 10px 15px; font-weight: bold;
-            }
+            QPushButton { background: white; border: 1px solid #7f8c8d; color: #333; border-radius: 6px; padding: 10px 15px; font-weight: bold; }
             QPushButton:hover { background: #ecf0f1; }
         """
         self.btn_load = QPushButton("📁 Cargar receta JSON")
@@ -391,19 +311,14 @@ class MainWindow(QMainWindow):
 
         self.btn_unlock = QPushButton("🔒 Bloqueado")
         self.btn_unlock.setStyleSheet("""
-            QPushButton {
-                background: #e74c3c; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none;
-            }
+            QPushButton { background: #e74c3c; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none; }
             QPushButton:hover { background: #c0392b; }
         """)
         self.btn_unlock.clicked.connect(self.toggle_unlock_mode)
 
-        # NUEVO: Botón de confirmar cambios
         self.btn_confirm = QPushButton("✔️ Confirmar Cambios")
         self.btn_confirm.setStyleSheet("""
-            QPushButton {
-                background: #3498db; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none;
-            }
+            QPushButton { background: #3498db; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none; }
             QPushButton:hover { background: #2980b9; }
         """)
         self.btn_confirm.setVisible(False)
@@ -415,12 +330,8 @@ class MainWindow(QMainWindow):
         botones.addWidget(self.btn_confirm)
         botones.addStretch()
 
-        # Botones Principales de Control
-        btn_style_big = """
-            QPushButton {
-                color: white; font-size: 18px; font-weight: bold; border-radius: 15px; border: none;
-            }
-        """
+        btn_style_big = "QPushButton { color: white; font-size: 18px; font-weight: bold; border-radius: 15px; border: none; }"
+        
         self.btn_start = QPushButton("▶ INICIAR")
         self.btn_start.setFixedSize(140, 55)
         self.btn_start.setStyleSheet(btn_style_big + "QPushButton { background: #27ae60; } QPushButton:hover { background: #2ecc71; }")
@@ -429,22 +340,20 @@ class MainWindow(QMainWindow):
         self.btn_pause = QPushButton("⏸ PAUSAR")
         self.btn_pause.setFixedSize(140, 55)
         self.btn_pause.setStyleSheet(btn_style_big + "QPushButton { background: #f39c12; } QPushButton:hover { background: #f1c40f; }")
-        self.btn_pause.setEnabled(False)
+        self.btn_pause.setVisible(False)  # Inicialmente oculto
         self.btn_pause.clicked.connect(self.pause_growth)
 
         self.btn_stop = QPushButton("⏹ DETENER")
         self.btn_stop.setFixedSize(140, 55)
         self.btn_stop.setStyleSheet(btn_style_big + "QPushButton { background: #e53935; } QPushButton:hover { background: #ef5350; }")
-        self.btn_stop.setEnabled(False)
+        self.btn_stop.setVisible(False)  # Inicialmente oculto
         self.btn_stop.clicked.connect(self.stop_growth)
 
         botones.addWidget(self.btn_start)
         botones.addWidget(self.btn_pause)
         botones.addWidget(self.btn_stop)
-
         main_layout.addLayout(botones)
 
-        # ---------------- Condiciones ----------------
         group = QGroupBox("Condiciones de la etapa")
         self.grid = QGridLayout(group)
         self.grid.setVerticalSpacing(15)
@@ -460,12 +369,10 @@ class MainWindow(QMainWindow):
 
         self.lbl_time_cur = QLabel("<b>Tiempo:</b> 0.0s / ")
         self.lbl_time_total_static = QLabel("0.0s")
-        
         self.spin_total_step_time = QDoubleSpinBox()
         self.spin_total_step_time.setRange(1.0, 99999.0)
         self.spin_total_step_time.setDecimals(1)
         self.spin_total_step_time.setSuffix("s")
-        self.spin_total_step_time.setToolTip("Modificar tiempo total de esta etapa")
         self.spin_total_step_time.setVisible(False)
         self.spin_total_step_time.valueChanged.connect(self.on_step_total_time_changed)
 
@@ -494,12 +401,8 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(group)
         layout.addWidget(right_panel)
 
-    # =========================================================================
-    # LÓGICA DE CONTROL Y NORMALIZACIÓN DE RECETAS
-    # =========================================================================
     def normalize_step(self, step):
         material = step.get("material") or step.get("name") or "Desconocido"
-        
         if "tiempo_total_crecimiento_sec" in step:
             growth_time = float(step["tiempo_total_crecimiento_sec"])
         elif "growth_time" in step:
@@ -531,33 +434,20 @@ class MainWindow(QMainWindow):
     def toggle_unlock_mode(self):
         self.is_unlocked = not self.is_unlocked
         if self.is_unlocked:
-            # Crear búfer temporal de los datos de la etapa actual
             if self.recipe_data and self.current_step_index < len(self.recipe_data):
                 self.temp_step_data = copy.deepcopy(self.recipe_data[self.current_step_index])
             else:
                 self.temp_step_data = None
 
             self.btn_unlock.setText("🔓 Modo Edición")
-            self.btn_unlock.setStyleSheet("""
-                QPushButton {
-                    background: #27ae60; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none;
-                }
-                QPushButton:hover { background: #2ecc71; }
-            """)
+            self.btn_unlock.setStyleSheet("QPushButton { background: #27ae60; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none; } QPushButton:hover { background: #2ecc71; }")
             self.btn_confirm.setVisible(True)
             self.lbl_time_total_static.setVisible(False)
             self.spin_total_step_time.setVisible(True)
         else:
-            # Si se vuelve a bloquear sin confirmar, se descartan los cambios del búfer
             self.temp_step_data = None
-
             self.btn_unlock.setText("🔒 Bloqueado")
-            self.btn_unlock.setStyleSheet("""
-                QPushButton {
-                    background: #e74c3c; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none;
-                }
-                QPushButton:hover { background: #c0392b; }
-            """)
+            self.btn_unlock.setStyleSheet("QPushButton { background: #e74c3c; color: white; border-radius: 6px; padding: 10px 15px; font-weight: bold; border: none; } QPushButton:hover { background: #c0392b; }")
             self.btn_confirm.setVisible(False)
             self.lbl_time_total_static.setVisible(True)
             self.spin_total_step_time.setVisible(False)
@@ -567,32 +457,25 @@ class MainWindow(QMainWindow):
             self.refresh_cells_ui(self.recipe_data[self.current_step_index], force_rebuild=True)
 
     def on_step_total_time_changed(self, new_val):
-        # AHORA: Modifica SOLO el búfer temporal, NO la receta activa ni la línea de tiempo
         if self.temp_step_data:
             self.temp_step_data["tiempo_total_crecimiento_sec"] = float(new_val)
 
     def apply_pending_changes(self):
-        """Inyecta los cambios del búfer a la receta real al presionar confirmar"""
         if self.is_unlocked and self.temp_step_data and self.recipe_data:
-            # 1. Copiar datos del búfer a la receta activa
             self.recipe_data[self.current_step_index] = copy.deepcopy(self.temp_step_data)
             
-            # 2. Forzar actualización de la línea de tiempo (Gantt)
             global_time = 0.0
             for i in range(self.current_step_index):
                 global_time += float(self.recipe_data[i].get("tiempo_total_crecimiento_sec", 0))
             global_time += self.current_step_time
             self.timeline.set_recipe_data(self.recipe_data, global_time)
             
-            # 3. Sincronizar etiquetas y barras visuales
             total_time = float(self.recipe_data[self.current_step_index].get("tiempo_total_crecimiento_sec", 60.0))
             self.lbl_time_total_static.setText(f"{total_time:.1f}s")
             pct = int((self.current_step_time / total_time) * 100) if total_time > 0 else 100
             self.progress_bar.setValue(min(100, pct))
             
-            # 4. Forzar un renderizado limpio de las celdas
-            self.refresh_cells_ui(self.recipe_data[self.current_step_index], force_rebuild=True)
-            
+            self.refresh_cells_ui(self.recipe_data[self.current_step_index], global_time, force_rebuild=True)
             QMessageBox.information(self, "Éxito", "Los cambios han sido inyectados en la receta activa exitosamente.")
 
     def select_recipe_file(self):
@@ -604,7 +487,6 @@ class MainWindow(QMainWindow):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 raw_data = json.load(f)
-            
             if not isinstance(raw_data, list) or len(raw_data) == 0:
                 QMessageBox.warning(self, "Advertencia", "El archivo no contiene una receta válida.")
                 return
@@ -652,7 +534,6 @@ class MainWindow(QMainWindow):
         total_time = float(step.get("tiempo_total_crecimiento_sec", 60.0))
         comentario = step.get("comentario", "")
 
-        # Refrescar el búfer de cambios si cambiamos de capa por tiempo natural estando desbloqueados
         if self.is_unlocked and (self.temp_step_data is None or self.last_drawn_step_index != self.current_step_index):
             self.temp_step_data = copy.deepcopy(step)
 
@@ -661,7 +542,6 @@ class MainWindow(QMainWindow):
         self.lbl_time_cur.setText(f"<b>Tiempo:</b> {self.current_step_time:.1f}s / ")
         self.lbl_time_total_static.setText(f"{total_time:.1f}s")
 
-        # Evitar sobreescribir el SpinBox si el usuario lo está editando
         if not self.is_unlocked:
             self.spin_total_step_time.blockSignals(True)
             self.spin_total_step_time.setValue(total_time)
@@ -681,25 +561,21 @@ class MainWindow(QMainWindow):
         global_time += self.current_step_time
 
         self.timeline.set_recipe_data(self.recipe_data, global_time)
-        self.refresh_cells_ui(step)
+        self.refresh_cells_ui(step, global_time)
 
-    # -------------------------------------------------------------------------
-    # MOTOR DE INTERFAZ OPTIMIZADO PARA CELDAS Y BÚFER TEMPORAL
-    # -------------------------------------------------------------------------
-    def refresh_cells_ui(self, step, force_rebuild=False):
+    def refresh_cells_ui(self, step, global_time=0.0, force_rebuild=False):
         if not step:
             while self.cells_layout.count():
                 item = self.cells_layout.takeAt(0)
                 if item.widget(): item.widget().deleteLater()
             self.cell_widgets.clear()
+            self.timeline.set_active_cells({}) 
             return
 
         if force_rebuild or self.last_drawn_step_index != self.current_step_index or self.last_drawn_lock_state != self.is_unlocked:
-            
             while self.cells_layout.count():
                 item = self.cells_layout.takeAt(0)
                 if item.widget(): item.widget().deleteLater()
-            
             self.cell_widgets.clear()
             
             cells = step.get("parametros_celdas", {})
@@ -725,10 +601,7 @@ class MainWindow(QMainWindow):
                     flayout.addWidget(lbl_title)
                     flayout.addWidget(lbl_status)
                     
-                    widget_refs = {
-                        "frame": frame,
-                        "status_lbl": lbl_status
-                    }
+                    widget_refs = {"frame": frame, "status_lbl": lbl_status}
 
                     if self.is_unlocked:
                         if mode == "Continuo":
@@ -738,18 +611,14 @@ class MainWindow(QMainWindow):
                             def make_toggle(cell_key):
                                 def toggle():
                                     if self.temp_step_data:
-                                        # Alterar estado en BÚFER
                                         current = self.temp_step_data["parametros_celdas"][cell_key].get("manual_is_open", True)
                                         self.temp_step_data["parametros_celdas"][cell_key]["manual_is_open"] = not current
-                                        
-                                        # Refrescar vista del botón
                                         btn = self.cell_widgets[cell_key]["toggle_btn"]
                                         if self.temp_step_data["parametros_celdas"][cell_key]["manual_is_open"]:
                                             btn.setText("🔴 Pendiente: Cerrar")
-                                            btn.setStyleSheet("background-color: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
                                         else:
                                             btn.setText("🟢 Pendiente: Abrir")
-                                            btn.setStyleSheet("background-color: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
+                                        btn.setStyleSheet("background-color: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
                                 return toggle
                                 
                             btn_toggle.clicked.connect(make_toggle(el))
@@ -765,23 +634,19 @@ class MainWindow(QMainWindow):
                             spin_s.setRange(0.0, 999.9)
                             spin_s.setDecimals(1)
                             spin_s.setValue(float(params.get("t_shift", 0.0)))
-                            spin_s.setToolTip("Shift")
                             
                             spin_o = QDoubleSpinBox()
                             spin_o.setRange(0.0, 999.9)
                             spin_o.setDecimals(1)
                             spin_o.setValue(float(params.get("t_open", 5.0)))
-                            spin_o.setToolTip("Open")
                             
                             spin_c = QDoubleSpinBox()
                             spin_c.setRange(0.0, 999.9)
                             spin_c.setDecimals(1)
                             spin_c.setValue(float(params.get("t_close", 5.0)))
-                            spin_c.setToolTip("Close")
 
                             def make_callback(cell_key, param_key):
                                 def on_val_changed(val):
-                                    # Alterar parámetros cíclicos en BÚFER
                                     if self.temp_step_data:
                                         self.temp_step_data["parametros_celdas"][cell_key][param_key] = float(val)
                                 return on_val_changed
@@ -816,18 +681,15 @@ class MainWindow(QMainWindow):
             self.last_drawn_step_index = self.current_step_index
             self.last_drawn_lock_state = self.is_unlocked
 
-        # =======================================================
-        # FASE 2: ACTUALIZACIÓN VISUAL (ESTADO REAL DEL EQUIPO)
-        # =======================================================
         cells = step.get("parametros_celdas", {})
+        current_active_states = {} 
+
         for el, params in cells.items():
             if el not in self.cell_widgets: continue
             
             mode = params.get("mode", "Continuo")
             is_open = True
             
-            # El recuadro maestro y la etiqueta principal SIEMPRE leen del estado REAL (`recipe_data`), 
-            # para que el usuario sepa qué está haciendo la máquina mientras decide si confirma los cambios.
             if mode == "Continuo":
                 is_open = params.get("manual_is_open", True) 
             elif mode == "Ciclo":
@@ -841,6 +703,8 @@ class MainWindow(QMainWindow):
                 else:
                     is_open = False
 
+            current_active_states[el] = is_open
+
             state_str = "ABIERTA" if is_open else "CERRADA"
             color_str = "#27ae60" if is_open else "#e53935"
             
@@ -848,17 +712,13 @@ class MainWindow(QMainWindow):
             self.cell_widgets[el]["status_lbl"].setStyleSheet(f"border: none; color: {color_str}; font-size: 16px; font-weight: bold;")
             self.cell_widgets[el]["frame"].setStyleSheet(f"background: white; border: 2px solid {color_str}; border-radius: 6px; padding: 5px;")
             
-            # El botón de la celda continua, por otro lado, refleja el estado en memoria (Búfer temporal)
             if "toggle_btn" in self.cell_widgets[el]:
                 btn = self.cell_widgets[el]["toggle_btn"]
-                
-                # Leemos la intención actual desde el búfer
                 if self.is_unlocked and self.temp_step_data and el in self.temp_step_data["parametros_celdas"]:
                     intent_is_open = self.temp_step_data["parametros_celdas"][el].get("manual_is_open", True)
                 else:
                     intent_is_open = is_open
 
-                # Solo actualiza el estilo si no está en estado "Pendiente" (para no borrar el color naranja)
                 if "Pendiente" not in btn.text():
                     if intent_is_open:
                         btn.setText("🔴 Preparar Cierre")
@@ -867,18 +727,31 @@ class MainWindow(QMainWindow):
                         btn.setText("🟢 Preparar Apertura")
                         btn.setStyleSheet("background-color: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
 
+        self.timeline.set_active_cells(current_active_states)
+        
+        if self.is_running and not self.is_paused:
+            log_entry = {"Tiempo_Global(s)": round(global_time, 1)}
+            for el in ["Ga", "Al", "In", "As", "N"]:
+                log_entry[el] = "ABIERTA" if current_active_states.get(el, False) else "CERRADA"
+            
+            if not self.history_log or self.history_log[-1]["Tiempo_Global(s)"] != log_entry["Tiempo_Global(s)"]:
+                self.history_log.append(log_entry)
+
     def start_growth(self):
         if not self.recipe_data:
             QMessageBox.warning(self, "Advertencia", "Por favor carga una receta JSON antes de iniciar.")
             return
-
+        
+        self.history_log = []
         self.is_running = True
         self.is_paused = False
         self.process_timer.start()
 
-        self.btn_start.setEnabled(False)
-        self.btn_pause.setEnabled(True)
-        self.btn_stop.setEnabled(True)
+        # CAMBIO SOLICITADO: Desaparece INICIAR, aparecen PAUSAR y DETENER
+        self.btn_start.setVisible(False)
+        self.btn_pause.setVisible(True)
+        self.btn_stop.setVisible(True)
+        self.btn_pause.setText("⏸ PAUSAR")
 
     def pause_growth(self):
         if self.is_paused:
@@ -895,20 +768,20 @@ class MainWindow(QMainWindow):
         self.is_running = False
         self.is_paused = False
 
-        self.btn_start.setEnabled(True)
-        self.btn_pause.setEnabled(False)
+        # CAMBIO SOLICITADO: Desaparecen PAUSAR y DETENER, vuelve a aparecer INICIAR
+        self.btn_start.setVisible(True)
+        self.btn_pause.setVisible(False)
+        self.btn_stop.setVisible(False)
         self.btn_pause.setText("⏸ PAUSAR")
-        self.btn_stop.setEnabled(False)
 
+        self.exportar_historial_csv()
         self.reset_process_to_first_valid_layer()
 
     def on_process_tick(self):
-        if not self.is_running or self.is_paused or not self.recipe_data:
-            return
+        if not self.is_running or self.is_paused or not self.recipe_data: return
 
         step = self.recipe_data[self.current_step_index]
         total_time = float(step.get("tiempo_total_crecimiento_sec", 60.0))
-
         self.current_step_time += 0.1
 
         if self.current_step_time >= total_time:
@@ -921,14 +794,33 @@ class MainWindow(QMainWindow):
             if self.current_step_index >= len(self.recipe_data):
                 self.process_timer.stop()
                 self.is_running = False
-                self.btn_start.setEnabled(True)
-                self.btn_pause.setEnabled(False)
-                self.btn_stop.setEnabled(False)
+                
+                # CAMBIO SOLICITADO: Al terminar el proceso, los botones regresan al estado inicial
+                self.btn_start.setVisible(True)
+                self.btn_pause.setVisible(False)
+                self.btn_stop.setVisible(False)
+                self.btn_pause.setText("⏸ PAUSAR")
+
                 self.update_step_display()
-                QMessageBox.information(self, "¡Proceso Completado!", "¡Todas las capas han finalizado!")
+                self.exportar_historial_csv()
+                QMessageBox.information(self, "¡Proceso Completado!", "¡Todas las capas han finalizado! Se guardó un archivo CSV con el historial.")
                 return
 
         self.update_step_display()
+
+    def exportar_historial_csv(self):
+        if not self.history_log: return
+        try:
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"historial_crecimiento_{timestamp}.csv"
+            keys = self.history_log[0].keys()
+            
+            with open(filename, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=keys)
+                writer.writeheader()
+                writer.writerows(self.history_log)
+        except Exception as e:
+            print(f"Error al guardar CSV: {e}")
 
     def launch_builder(self):
         try:
