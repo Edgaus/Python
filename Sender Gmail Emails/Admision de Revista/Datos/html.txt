@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Noticia: Superficies y Vacío</title>
+</head>
+<body style="margin:0;padding:0;background-color:#E9ECEF;font-family:Arial,Helvetica,sans-serif;">
+    <table width="100%" cellpadding="10" cellspacing="0" style="background-color:#E9ECEF;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow:hidden;">
+                    
+                    <!-- Encabezado Oscuro (Logo y Saludo) -->
+                    <tr>
+                        <td align="center" style="background-color:#002B5B; padding:35px 20px;">
+                            <img src="https://github.com/Edgaus/Images-SVG/blob/main/qer.png?raw=true" height="80" alt="Capítulo Estudiantil Logo" style="display:inline-block; margin-bottom:20px;" />
+                            <div style="color:#ffffff; font-size:26px; font-weight:800; font-style:italic; line-height:1.2; text-transform:uppercase;">
+                                ¡Hola, {{ Nombre }}!
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Cuerpo Blanco (Mensaje Principal) -->
+                    <tr>
+                        <td align="center" style="padding:40px 40px 30px;">
+                            <div style="font-size:22px; color:#002B5B; font-weight:bold; margin-bottom:20px; text-transform:uppercase;">
+                                ¡Excelente noticia!
+                            </div>
+                            
+                            <div style="font-size:16px; color:#444444; line-height:1.6; margin-bottom:25px; text-align:center;">
+                                Nuestra revista <strong>Superficies y Vacío</strong> ha sido incorporada al <strong>Sistema Nacional de Publicaciones Científicas y Humanísticas (SNPCyH) 2026</strong>, coordinado por la SECIHTI.
+                            </div>
+
+                            <!-- Cuadro de Información (Estilo Borde Cyan) -->
+                            <div style="background-color:#F8F9FA; border-left:4px solid #00D4FF; padding:20px; text-align:left; margin-bottom:25px;">
+                                <div style="font-size:13px; color:#666666; margin-bottom:5px; text-transform:uppercase; font-weight:bold;">
+                                    Reconocimiento especial al
+                                </div>
+                                <div style="font-size:18px; color:#002B5B; font-weight:bold; margin-bottom:8px;">
+                                    Dr. Miguel Angel Santana-Aranda
+                                </div>
+                                <div style="font-size:14px; color:#444444; line-height:1.5;">
+                                    (Física, CUCEI-UdeG), editor en jefe, por su valiosa labor en la revista, que ha hecho posible este reconocimiento.
+                                </div>
+                            </div>
+                            
+                            <div style="font-size:16px; color:#444444; line-height:1.6; margin-bottom:25px; text-align:center;">
+                                Este logro representa un impulso importante para seguir difundiendo investigación de excelencia en el área de superficies y vacío.
+                            </div>
+
+                            <!-- Botón CTA -->
+                            <div style="text-align:center; margin-top: 10px;">
+                                <a href="https://www.superficiesyvacio.smctsm.org.mx" 
+                                   style="background-color:#002B5B; color:#ffffff; font-weight:bold; text-decoration:none; padding:14px 40px; border-radius:25px; display:inline-block; font-size:14px; text-transform:uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                                    Visitar la Revista
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Contenedor Oscuro para la Imagen (Cartel) -->
+                    <tr>
+                        <td align="center" style="background-color:#0A2540; padding:30px 20px;">
+                            <!-- AQUÍ ESTÁ EL ENLACE CORREGIDO DE LA IMAGEN -->
+                            <img src="https://raw.githubusercontent.com/Edgaus/Images-SVG/refs/heads/main/Cartel.png" width="500" alt="Cartel del Curso" style="display:block; max-width:100%; height:auto; border-radius:8px; border:1px solid #4A5568;" />
+                        </td>
+                    </tr>
+
+                    <!-- Pie de página Oscuro (Redes y Dirección) -->
+                    <tr>
+                        <td align="center" style="background-color:#002B5B; padding:25px 20px;">
+                            <div style="font-size:11px; color:#AAB7C4; margin-bottom:15px;">
+                                Av. Instituto Politécnico Nacional 2508, Mexico City, Mexico
+                            </div>
+                            <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                                <tr>
+                                    <td align="center" style="padding:0 10px;"><a href="https://www.facebook.com/profile.php?id=61583545131508&sk=followers"><img src="https://github.com/Edgaus/Images-SVG/raw/main/facebook.png?raw=true" height="24" style="display:block;" alt="Facebook"></a></td>
+                                    <td align="center" style="padding:0 10px;"><a href="https://site.smctsm.org.mx/jovenes-investigadores/"><img src="https://github.com/Edgaus/Images-SVG/raw/main/SMCTSM.png?raw=true" height="24" style="display:block;" alt="Website"></a></td>
+                                    <td align="center" style="padding:0 10px;"><a href="mailto:contacto@smctsm.org.mx"><img src="https://github.com/Edgaus/Images-SVG/raw/main/Mail.png?raw=true" height="24" style="display:block;" alt="Email"></a></td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table> 
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
