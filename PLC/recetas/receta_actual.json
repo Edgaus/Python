@@ -1,0 +1,95 @@
+[
+    {
+        "name": "Silicon Carbide Substrate",
+        "is_substrate": true,
+        "growth_time": 0.0,
+        "comment": "",
+        "element_data": {}
+    },
+    {
+        "name": "AlN",
+        "is_substrate": false,
+        "growth_time": 120.0,
+        "comment": "",
+        "element_data": {
+            "Al": {
+                "mode": "Ciclo",
+                "t_shift": 3.0,
+                "t_open": 6.0,
+                "t_close": 6.0
+            },
+            "N": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
+            }
+        }
+    },
+    {
+        "name": "AlN",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "Al": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
+            },
+            "N": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
+            }
+        }
+    },
+    {
+        "name": "AlAs",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "Al": {
+                "mode": "Ciclo",
+                "t_shift": 2.0,
+                "t_open": 6.0,
+                "t_close": 6.0
+            },
+            "As": {
+                "mode": "Ciclo",
+                "t_shift": 1.0,
+                "t_open": 6.0,
+                "t_close": 5.0
+            }
+        }
+    },
+    {
+        "name": "InGaN",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "In": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
+            },
+            "Ga": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
+            },
+            "N": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
+            }
+        }
+    }
+]
