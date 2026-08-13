@@ -13,6 +13,12 @@ from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
 # =========================================================================
+# PREPARACIÓN PARA EL PLC (Descomentar cuando tengas los archivos listos)
+# ==========================================
+# import config
+# from plc_worker import MonitorPLCWorker
+
+# =========================================================================
 # HOJA DE ESTILOS GENERAL
 # =========================================================================
 MAIN_STYLE_SHEET = """
@@ -48,8 +54,135 @@ QDoubleSpinBox::up-arrow { width: 0; height: 0; border-left: 4px solid transpare
 QDoubleSpinBox::down-arrow { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #000000; }
 """
 
+
 # =========================================================================
-# WIDGET GRÁFICO DE LÍNEA DE TIEMPO (CON RASTRO TIPO KARAOKE)
+# EL MOTOR SECUENCIADOR 
+# =========================================================================
+class MotorSecuenciador:
+    def __init__(self):
+        self.receta = []
+        self.tiempo_global = 0.0
+        self.tiempo_etapa_actual = 0.0
+        self.indice_etapa = 0
+        self.estado_anterior_celdas = {}
+        self.proceso_terminado = False
+
+    def cargar_receta(self, datos_json):
+        self.receta = datos_json
+        self.reiniciar()
+
+    def reiniciar(self):
+        self.tiempo_global = 0.0
+        self.tiempo_etapa_actual = 0.0
+        self.indice_etapa = 0
+        self.estado_anterior_celdas = {}
+        self.proceso_terminado = False
+        self._saltar_etapas_vacias()
+
+    def modificar_receta(self, receta_actualizada):
+        """Permite cambiar los parámetros al vuelo desde la UI"""
+        self.receta = receta_actualizada
+
+    def _saltar_etapas_vacias(self):
+        while self.indice_etapa < len(self.receta):
+            paso = self.receta[self.indice_etapa]
+            t_total = float(paso.get("tiempo_total_crecimiento_sec", 0.0))
+            if t_total > 0:
+                break
+            self.indice_etapa += 1
+        
+        if self.indice_etapa >= len(self.receta):
+            self.proceso_terminado = True
+
+    def procesar_tick(self, delta_t):
+        """Avanza el tiempo, calcula los ciclos y detecta cambios para el PLC"""
+        if self.proceso_terminado or not self.receta:
+            return {"terminado": True}
+
+        self.tiempo_global += delta_t
+        self.tiempo_etapa_actual += delta_t
+
+        paso_actual = self.receta[self.indice_etapa]
+        duracion_paso = float(paso_actual.get("tiempo_total_crecimiento_sec", 0.0))
+
+        # Verificar si brincamos a la siguiente capa
+        if self.tiempo_etapa_actual >= duracion_paso:
+            self.tiempo_etapa_actual = 0.0
+            self.indice_etapa += 1
+            self._saltar_etapas_vacias()
+            
+            if self.proceso_terminado:
+                # Si se acabó, mandar orden de apagar TODO al PLC
+                cambios = {celda: False for celda in self.estado_anterior_celdas if self.estado_anterior_celdas[celda]}
+                self.estado_anterior_celdas = {}
+                return {"terminado": True, "comandos_plc_nuevos": cambios, "estado_luces_ui": {}}
+            
+            paso_actual = self.receta[self.indice_etapa]
+
+        # 1. Calcular cómo deberían estar las celdas en este milisegundo exacto
+        estado_actual = self._calcular_estado_celdas(paso_actual, self.tiempo_etapa_actual)
+        
+        # 2. Detectar si hubo algún cambio físico respecto al ciclo anterior
+        cambios_hardware = self._detectar_cambios(estado_actual)
+        
+        # 3. Guardar el historial para el próximo ciclo
+        self.estado_anterior_celdas = estado_actual
+
+        return {
+            "terminado": False,
+            "indice_etapa": self.indice_etapa,
+            "tiempo_etapa_actual": self.tiempo_etapa_actual,
+            "tiempo_global": self.tiempo_global,
+            "estado_luces_ui": estado_actual,
+            "comandos_plc_nuevos": cambios_hardware
+        }
+
+    def _calcular_estado_celdas(self, paso, t_etapa):
+        estado = {}
+        celdas = paso.get("parametros_celdas", {})
+        for el, params in celdas.items():
+            mode = params.get("mode", "Continuo")
+            if mode == "Continuo":
+                estado[el] = params.get("manual_is_open", True)
+            elif mode == "Ciclo":
+                t_shift = float(params.get("t_shift", 0.0))
+                t_open = float(params.get("t_open", 5.0))
+                t_close = float(params.get("t_close", 5.0))
+                period = t_shift + t_open + t_close
+                if period > 0:
+                    pos = t_etapa % period
+                    estado[el] = (t_shift <= pos < (t_shift + t_open))
+                else:
+                    estado[el] = False
+        return estado
+
+    def _detectar_cambios(self, estado_actual):
+        cambios = {}
+        # Celdas que cambiaron su estado actual (ej. de Abierto a Cerrado)
+        for celda, esta_abierta in estado_actual.items():
+            if self.estado_anterior_celdas.get(celda) != esta_abierta:
+                cambios[celda] = esta_abierta
+                
+        # Celdas que desaparecieron en esta nueva etapa (se apagaron)
+        for celda, estaba_abierta in self.estado_anterior_celdas.items():
+            if celda not in estado_actual and estaba_abierta:
+                cambios[celda] = False
+        return cambios
+
+    def obtener_estado_estatico(self):
+        """Solo para UI: devuelve la foto de las celdas estando en Pausa o Stop"""
+        if self.proceso_terminado or not self.receta or self.indice_etapa >= len(self.receta):
+            return {}
+        return self._calcular_estado_celdas(self.receta[self.indice_etapa], self.tiempo_etapa_actual)
+
+
+
+
+
+
+
+# =========================================================================
+# WIDGET GRÁFICO DE LÍNEA DE TIEMPO 
 # =========================================================================
 class TimelineWidget(QWidget):
     def __init__(self, parent=None):
@@ -222,6 +355,8 @@ class TimelineWidget(QWidget):
             p.setFont(QFont("Arial", 10, QFont.Weight.Bold))
             p.drawText(int(playhead_x) - 20, top - 15, "Ahora")
 
+
+
 # =========================================================================
 # VENTANA PRINCIPAL
 # =========================================================================
@@ -232,10 +367,10 @@ class MainWindow(QMainWindow):
         self.resize(1350, 800)
         self.setStyleSheet(MAIN_STYLE_SHEET)
 
+        # Inicializamos el Motor Secuenciador (El Cerebro)
+        self.motor = MotorSecuenciador()
         self.recipe_data = []
         self.temp_step_data = None 
-        self.current_step_index = 0
-        self.current_step_time = 0.0
         
         self.is_running = False
         self.is_paused = False
@@ -249,6 +384,8 @@ class MainWindow(QMainWindow):
         self.process_timer = QTimer(self)
         self.process_timer.setInterval(100)
         self.process_timer.timeout.connect(self.on_process_tick)
+
+        # self.hilo_plc = MonitorPLCWorker() # Descomentar cuando tengas PLC
 
         self.buildUI()
         if recipe_path and os.path.exists(recipe_path):
@@ -277,7 +414,8 @@ class MainWindow(QMainWindow):
         title.setStyleSheet("font-size: 22px; font-weight: bold; margin-bottom: 20px;")
         sideLayout.addWidget(title)
 
-        for txt in ["Crecimiento", "Recetas", "Parámetros", "Historial", "Alarmas", "Configuración"]:
+
+        for txt in ["Cocinar 🛠️", "Recetas 📁", "Historial 📁"]:
             btn = QPushButton(txt)
             sideLayout.addWidget(btn)
 
@@ -297,17 +435,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.timeline)
 
         botones = QHBoxLayout()
-        btn_style_small = """
-            QPushButton { background: white; border: 1px solid #7f8c8d; color: #333; border-radius: 6px; padding: 10px 15px; font-weight: bold; }
-            QPushButton:hover { background: #ecf0f1; }
-        """
-        self.btn_load = QPushButton("📁 Cargar receta JSON")
-        self.btn_load.setStyleSheet(btn_style_small)
-        self.btn_load.clicked.connect(self.select_recipe_file)
 
-        self.btn_builder = QPushButton("🛠️ Crear receta (Builder)")
-        self.btn_builder.setStyleSheet(btn_style_small)
-        self.btn_builder.clicked.connect(self.launch_builder)
 
         self.btn_unlock = QPushButton("🔒 Bloqueado")
         self.btn_unlock.setStyleSheet("""
@@ -340,13 +468,13 @@ class MainWindow(QMainWindow):
         self.btn_pause = QPushButton("⏸ PAUSAR")
         self.btn_pause.setFixedSize(140, 55)
         self.btn_pause.setStyleSheet(btn_style_big + "QPushButton { background: #f39c12; } QPushButton:hover { background: #f1c40f; }")
-        self.btn_pause.setVisible(False)  # Inicialmente oculto
+        self.btn_pause.setVisible(False)  
         self.btn_pause.clicked.connect(self.pause_growth)
 
         self.btn_stop = QPushButton("⏹ DETENER")
         self.btn_stop.setFixedSize(140, 55)
         self.btn_stop.setStyleSheet(btn_style_big + "QPushButton { background: #e53935; } QPushButton:hover { background: #ef5350; }")
-        self.btn_stop.setVisible(False)  # Inicialmente oculto
+        self.btn_stop.setVisible(False) 
         self.btn_stop.clicked.connect(self.stop_growth)
 
         botones.addWidget(self.btn_start)
@@ -434,8 +562,8 @@ class MainWindow(QMainWindow):
     def toggle_unlock_mode(self):
         self.is_unlocked = not self.is_unlocked
         if self.is_unlocked:
-            if self.recipe_data and self.current_step_index < len(self.recipe_data):
-                self.temp_step_data = copy.deepcopy(self.recipe_data[self.current_step_index])
+            if self.recipe_data and not self.motor.proceso_terminado:
+                self.temp_step_data = copy.deepcopy(self.recipe_data[self.motor.indice_etapa])
             else:
                 self.temp_step_data = None
 
@@ -452,9 +580,7 @@ class MainWindow(QMainWindow):
             self.lbl_time_total_static.setVisible(True)
             self.spin_total_step_time.setVisible(False)
         
-        if self.recipe_data and self.current_step_index < len(self.recipe_data):
-            self.update_step_display()
-            self.refresh_cells_ui(self.recipe_data[self.current_step_index], force_rebuild=True)
+        self.update_step_display()
 
     def on_step_total_time_changed(self, new_val):
         if self.temp_step_data:
@@ -462,21 +588,16 @@ class MainWindow(QMainWindow):
 
     def apply_pending_changes(self):
         if self.is_unlocked and self.temp_step_data and self.recipe_data:
-            self.recipe_data[self.current_step_index] = copy.deepcopy(self.temp_step_data)
+            # 1. Inyectamos los cambios a la receta oficial
+            self.recipe_data[self.motor.indice_etapa] = copy.deepcopy(self.temp_step_data)
             
-            global_time = 0.0
-            for i in range(self.current_step_index):
-                global_time += float(self.recipe_data[i].get("tiempo_total_crecimiento_sec", 0))
-            global_time += self.current_step_time
-            self.timeline.set_recipe_data(self.recipe_data, global_time)
+            # 2. Le avisamos al Motor Secuenciador para que se recálcule
+            self.motor.modificar_receta(self.recipe_data)
             
-            total_time = float(self.recipe_data[self.current_step_index].get("tiempo_total_crecimiento_sec", 60.0))
-            self.lbl_time_total_static.setText(f"{total_time:.1f}s")
-            pct = int((self.current_step_time / total_time) * 100) if total_time > 0 else 100
-            self.progress_bar.setValue(min(100, pct))
-            
-            self.refresh_cells_ui(self.recipe_data[self.current_step_index], global_time, force_rebuild=True)
-            QMessageBox.information(self, "Éxito", "Los cambios han sido inyectados en la receta activa exitosamente.")
+            # 3. Refrescamos todo visualmente
+            self.last_drawn_step_index = -1 # Forzamos redibujo de celdas
+            self.update_step_display()
+            QMessageBox.information(self, "Éxito", "Los cambios han sido inyectados en el Motor Secuenciador.")
 
     def select_recipe_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Cargar Receta MBE", "", "Archivos JSON (*.json)")
@@ -492,29 +613,18 @@ class MainWindow(QMainWindow):
                 return
 
             self.recipe_data = [self.normalize_step(s) for s in raw_data]
-            self.reset_process_to_first_valid_layer()
+            
+            # Enviamos la receta al Cerebro (Motor)
+            self.motor.cargar_receta(self.recipe_data)
+            self.last_drawn_step_index = -1
+            
+            self.update_step_display()
             QMessageBox.information(self, "Éxito", f"Receta '{os.path.basename(file_path)}' cargada correctamente.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo leer el archivo JSON:\n{e}")
 
-    def reset_process_to_first_valid_layer(self):
-        self.current_step_time = 0.0
-        self.current_step_index = 0
-        self.last_drawn_step_index = -1
-        
-        while self.current_step_index < len(self.recipe_data):
-            step_time = float(self.recipe_data[self.current_step_index].get("tiempo_total_crecimiento_sec", 0))
-            if step_time > 0.0:
-                break
-            self.current_step_index += 1
-            
-        if self.current_step_index >= len(self.recipe_data):
-            self.current_step_index = 0
-            
-        self.update_step_display()
-
-    def update_step_display(self):
-        if not self.recipe_data or self.current_step_index >= len(self.recipe_data):
+    def update_step_display(self, estado_luces_ui=None):
+        if not self.recipe_data or self.motor.proceso_terminado:
             self.lbl_material.setText("<b>Material:</b> Finalizado")
             self.lbl_step.setText("<b>Etapa:</b> - / -")
             self.lbl_time_cur.setText("<b>Tiempo:</b> 0.0s / ")
@@ -529,17 +639,17 @@ class MainWindow(QMainWindow):
             self.refresh_cells_ui(None)
             return
 
-        step = self.recipe_data[self.current_step_index]
+        step = self.recipe_data[self.motor.indice_etapa]
         material = step.get("material", "Desconocido")
         total_time = float(step.get("tiempo_total_crecimiento_sec", 60.0))
         comentario = step.get("comentario", "")
 
-        if self.is_unlocked and (self.temp_step_data is None or self.last_drawn_step_index != self.current_step_index):
+        if self.is_unlocked and (self.temp_step_data is None or self.last_drawn_step_index != self.motor.indice_etapa):
             self.temp_step_data = copy.deepcopy(step)
 
         self.lbl_material.setText(f"<b>Material:</b> <font color='#0d2a52'>{material}</font>")
-        self.lbl_step.setText(f"<b>Etapa:</b> {self.current_step_index + 1} de {len(self.recipe_data)}")
-        self.lbl_time_cur.setText(f"<b>Tiempo:</b> {self.current_step_time:.1f}s / ")
+        self.lbl_step.setText(f"<b>Etapa:</b> {self.motor.indice_etapa + 1} de {len(self.recipe_data)}")
+        self.lbl_time_cur.setText(f"<b>Tiempo:</b> {self.motor.tiempo_etapa_actual:.1f}s / ")
         self.lbl_time_total_static.setText(f"{total_time:.1f}s")
 
         if not self.is_unlocked:
@@ -552,18 +662,20 @@ class MainWindow(QMainWindow):
         else:
             self.lbl_comment.setText("<b>Comentario:</b> <i>Ninguno</i>")
         
-        pct = int((self.current_step_time / total_time) * 100) if total_time > 0 else 100
+        pct = int((self.motor.tiempo_etapa_actual / total_time) * 100) if total_time > 0 else 100
         self.progress_bar.setValue(min(100, pct))
         
-        global_time = 0.0
-        for i in range(self.current_step_index):
-            global_time += float(self.recipe_data[i].get("tiempo_total_crecimiento_sec", 0))
-        global_time += self.current_step_time
+        self.timeline.set_recipe_data(self.recipe_data, self.motor.tiempo_global)
+        
+        # Si la UI lo pide estático (sin correr), calculamos una foto
+        if estado_luces_ui is None:
+            estado_luces_ui = self.motor.obtener_estado_estatico()
+            
+        self.refresh_cells_ui(step, estado_luces_ui)
 
-        self.timeline.set_recipe_data(self.recipe_data, global_time)
-        self.refresh_cells_ui(step, global_time)
+    def refresh_cells_ui(self, step, active_states=None):
+        if active_states is None: active_states = {}
 
-    def refresh_cells_ui(self, step, global_time=0.0, force_rebuild=False):
         if not step:
             while self.cells_layout.count():
                 item = self.cells_layout.takeAt(0)
@@ -572,7 +684,7 @@ class MainWindow(QMainWindow):
             self.timeline.set_active_cells({}) 
             return
 
-        if force_rebuild or self.last_drawn_step_index != self.current_step_index or self.last_drawn_lock_state != self.is_unlocked:
+        if self.last_drawn_step_index != self.motor.indice_etapa or self.last_drawn_lock_state != self.is_unlocked:
             while self.cells_layout.count():
                 item = self.cells_layout.takeAt(0)
                 if item.widget(): item.widget().deleteLater()
@@ -678,32 +790,15 @@ class MainWindow(QMainWindow):
 
                 self.cells_layout.addStretch()
                 
-            self.last_drawn_step_index = self.current_step_index
+            self.last_drawn_step_index = self.motor.indice_etapa
             self.last_drawn_lock_state = self.is_unlocked
 
+        # Actualizamos la UI basada en la matemática que resolvió el Motor
         cells = step.get("parametros_celdas", {})
-        current_active_states = {} 
-
         for el, params in cells.items():
             if el not in self.cell_widgets: continue
             
-            mode = params.get("mode", "Continuo")
-            is_open = True
-            
-            if mode == "Continuo":
-                is_open = params.get("manual_is_open", True) 
-            elif mode == "Ciclo":
-                t_shift = float(params.get("t_shift", 0.0))
-                t_open = float(params.get("t_open", 5.0))
-                t_close = float(params.get("t_close", 5.0))
-                period = t_shift + t_open + t_close
-                if period > 0:
-                    pos_in_cycle = self.current_step_time % period
-                    is_open = (t_shift <= pos_in_cycle < (t_shift + t_open))
-                else:
-                    is_open = False
-
-            current_active_states[el] = is_open
+            is_open = active_states.get(el, False)
 
             state_str = "ABIERTA" if is_open else "CERRADA"
             color_str = "#27ae60" if is_open else "#e53935"
@@ -714,11 +809,7 @@ class MainWindow(QMainWindow):
             
             if "toggle_btn" in self.cell_widgets[el]:
                 btn = self.cell_widgets[el]["toggle_btn"]
-                if self.is_unlocked and self.temp_step_data and el in self.temp_step_data["parametros_celdas"]:
-                    intent_is_open = self.temp_step_data["parametros_celdas"][el].get("manual_is_open", True)
-                else:
-                    intent_is_open = is_open
-
+                intent_is_open = self.temp_step_data["parametros_celdas"][el].get("manual_is_open", True) if self.temp_step_data else is_open
                 if "Pendiente" not in btn.text():
                     if intent_is_open:
                         btn.setText("🔴 Preparar Cierre")
@@ -727,15 +818,7 @@ class MainWindow(QMainWindow):
                         btn.setText("🟢 Preparar Apertura")
                         btn.setStyleSheet("background-color: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 12px;")
 
-        self.timeline.set_active_cells(current_active_states)
-        
-        if self.is_running and not self.is_paused:
-            log_entry = {"Tiempo_Global(s)": round(global_time, 1)}
-            for el in ["Ga", "Al", "In", "As", "N"]:
-                log_entry[el] = "ABIERTA" if current_active_states.get(el, False) else "CERRADA"
-            
-            if not self.history_log or self.history_log[-1]["Tiempo_Global(s)"] != log_entry["Tiempo_Global(s)"]:
-                self.history_log.append(log_entry)
+        self.timeline.set_active_cells(active_states)
 
     def start_growth(self):
         if not self.recipe_data:
@@ -746,8 +829,9 @@ class MainWindow(QMainWindow):
         self.is_running = True
         self.is_paused = False
         self.process_timer.start()
+        
+        # self.hilo_plc.start() # Descomentar para conectar a hardware
 
-        # CAMBIO SOLICITADO: Desaparece INICIAR, aparecen PAUSAR y DETENER
         self.btn_start.setVisible(False)
         self.btn_pause.setVisible(True)
         self.btn_stop.setVisible(True)
@@ -767,46 +851,54 @@ class MainWindow(QMainWindow):
         self.process_timer.stop()
         self.is_running = False
         self.is_paused = False
+        
+        # self.hilo_plc.detener() # Descomentar para detener hardware
 
-        # CAMBIO SOLICITADO: Desaparecen PAUSAR y DETENER, vuelve a aparecer INICIAR
         self.btn_start.setVisible(True)
         self.btn_pause.setVisible(False)
         self.btn_stop.setVisible(False)
         self.btn_pause.setText("⏸ PAUSAR")
 
         self.exportar_historial_csv()
-        self.reset_process_to_first_valid_layer()
-
-    def on_process_tick(self):
-        if not self.is_running or self.is_paused or not self.recipe_data: return
-
-        step = self.recipe_data[self.current_step_index]
-        total_time = float(step.get("tiempo_total_crecimiento_sec", 60.0))
-        self.current_step_time += 0.1
-
-        if self.current_step_time >= total_time:
-            self.current_step_index += 1
-            self.current_step_time = 0.0
-
-            while self.current_step_index < len(self.recipe_data) and float(self.recipe_data[self.current_step_index].get("tiempo_total_crecimiento_sec", 0)) == 0.0:
-                 self.current_step_index += 1
-
-            if self.current_step_index >= len(self.recipe_data):
-                self.process_timer.stop()
-                self.is_running = False
-                
-                # CAMBIO SOLICITADO: Al terminar el proceso, los botones regresan al estado inicial
-                self.btn_start.setVisible(True)
-                self.btn_pause.setVisible(False)
-                self.btn_stop.setVisible(False)
-                self.btn_pause.setText("⏸ PAUSAR")
-
-                self.update_step_display()
-                self.exportar_historial_csv()
-                QMessageBox.information(self, "¡Proceso Completado!", "¡Todas las capas han finalizado! Se guardó un archivo CSV con el historial.")
-                return
-
+        self.motor.reiniciar()
         self.update_step_display()
+
+    # =========================================================================
+    # BUCLE PRINCIPAL 
+    # =========================================================================
+    def on_process_tick(self):
+        if not self.is_running or self.is_paused: return
+
+        # 1. El motor avanza 0.1s y hace toda la matemática pesada
+        resultados = self.motor.procesar_tick(0.1)
+
+        # 2. Si el motor dice que terminamos la receta, detenemos todo
+        if resultados["terminado"]:
+            self.stop_growth()
+            # Si hay comandos para apagar las celdas al terminar:
+            comandos_finales = resultados.get("comandos_plc_nuevos", {})
+            for celda, debe_abrir in comandos_finales.items():
+                print(f"📡 COMANDO PLC -> Celda {celda}: CERRADO (Fin de receta)")
+            QMessageBox.information(self, "¡Proceso Completado!", "¡Todas las capas han finalizado! Se guardó un archivo CSV con el historial.")
+            return
+
+        # 3. Mandamos las órdenes detectadas por el Motor al PLC
+        for celda, debe_abrir in resultados["comandos_plc_nuevos"].items():
+            estado_txt = "ABIERTO" if debe_abrir else "CERRADO"
+            print(f"📡 COMANDO PLC -> Celda {celda}: {estado_txt}")
+            # self.hilo_plc.escribir_motor(celda, debe_abrir) # <- Tu conexión real a Snap7
+
+        # 4. Guardado en Historial Log
+        estado_ui = resultados["estado_luces_ui"]
+        log_entry = {"Tiempo_Global(s)": round(resultados["tiempo_global"], 1)}
+        for el in ["Ga", "Al", "In", "As", "N"]:
+            log_entry[el] = "ABIERTA" if estado_ui.get(el, False) else "CERRADA"
+        
+        if not self.history_log or self.history_log[-1]["Tiempo_Global(s)"] != log_entry["Tiempo_Global(s)"]:
+            self.history_log.append(log_entry)
+
+        # 5. Actualizamos la pantalla con los nuevos resultados visuales
+        self.update_step_display(estado_ui)
 
     def exportar_historial_csv(self):
         if not self.history_log: return
@@ -827,6 +919,7 @@ class MainWindow(QMainWindow):
             subprocess.Popen([sys.executable, "builder.py"])
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo abrir builder.py:\n{e}")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
