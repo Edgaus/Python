@@ -1,0 +1,9 @@
+# Python virtual environment
+.venv/
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# PLC backend run logs (generated at runtime by monitor_247.py)
+PLC/historial/

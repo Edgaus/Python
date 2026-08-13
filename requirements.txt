@@ -1,0 +1,24 @@
+# Python dependencies for this workspace's projects.
+# Install into a virtual environment:  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+#
+# NOTE: Two dependencies used by some scripts are intentionally omitted here
+# because they are Windows-only / hardware-specific and cannot be installed on Linux:
+#   - comtypes      (Word COM automation, used by a couple of "Sender Gmail Emails" scripts)
+#   - python-snap7  (Siemens S7 PLC driver, needs the native libsnap7 library; the PLC
+#                    hardware integration is disabled/commented out in the code)
+
+# PLC / MBE SCADA desktop app (PLC/main.py, PLC/builder.py)
+PyQt6
+
+# Interpolate_Data (scientific data smoothing/resampling)
+numpy
+scipy
+
+# Compress Images
+Pillow
+
+# Sender Gmail Emails (Excel mail-merge campaigns)
+pandas
+openpyxl
+python-docx
+docxtpl
