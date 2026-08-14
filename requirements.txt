@@ -1,0 +1,18 @@
+# Primary product: PLC/ (MBE cell control / SCADA).
+# Install: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+#
+# Intentionally omitted:
+#   - python-snap7  (needs native libsnap7 + real Siemens PLC; hardware path is disabled in code)
+#   - comtypes      (Windows-only; used only by out-of-scope Gmail scripts)
+
+# PLC / MBE SCADA (main.py, builder.py)
+PyQt6
+
+# Also present for other folders in this repo (out of Cloud Agent scope by default)
+numpy
+scipy
+Pillow
+pandas
+openpyxl
+python-docx
+docxtpl

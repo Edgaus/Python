@@ -1,3 +1,18 @@
+"""
+main.py — HMI del operador (hoy mezcla UI2 + UI3 en una sola ventana)
+
+UI2 = TimelineWidget: línea de tiempo del PLAN (receta JSON).
+UI3 = panel inferior + botones: luces abiertas/cerradas "ahora",
+      INICIAR / PAUSAR / DETENER, desbloqueo para editar en vivo.
+
+Estado actual: "Modo Visual" — los sockets UDP hacia monitor_247.py están
+comentados, así que puedes cargar una receta y ver la gráfica sin el cerebro.
+Cuando se rehabiliten, enviar_comando() hablará con 127.0.0.1:5000 y
+escuchar_backend() leerá el estado en :5001.
+
+Lanzar:  cd PLC && ../.venv/bin/python main.py
+Desde el menú lateral también se abren builder.py (UI1) e historial_vivo.py (UI4).
+"""
 import sys
 import json
 import subprocess
@@ -17,7 +32,7 @@ from monitor_client import MonitorCliente
 import config
 
 # =========================================================================
-# WIDGET GRÁFICO DE LÍNEA DE TIEMPO (Sin estela karaoke)
+# UI2 — WIDGET: línea de tiempo del PLAN (receta), no del CSV
 # =========================================================================
 class TimelineWidget(QWidget):
     def __init__(self, parent=None):
@@ -176,7 +191,7 @@ class TimelineWidget(QWidget):
             p.drawText(int(playhead_x) - 20, top - 15, "Ahora")
 
 # =========================================================================
-# VENTANA PRINCIPAL (CLIENTE DEL MONITOR SCADA)
+# UI2 + UI3 — Ventana principal (cliente del monitor SCADA)
 # =========================================================================
 class MainWindow(QMainWindow):
     def __init__(self, recipe_path=None):
@@ -305,7 +320,8 @@ class MainWindow(QMainWindow):
         
         # Agregamos solo las que realmente utilizas (incluyendo Recetas e Historial con sus carpetas)
         menu_items = [
-            ("🕒 Historial", lambda: self.abrir_explorador("historial")),
+            ("🕒 Historial (carpeta)", lambda: self.abrir_explorador("historial")),
+            ("📈 Historial vivo (UI4)", self.launch_historial_vivo),
             ("📁 Cargar receta JSON", self.select_recipe_file),
             ("🛠️ Crear receta (Builder)", self.launch_builder),
             ("👁 Visor de celdas", self.launch_visor),
@@ -318,6 +334,8 @@ class MainWindow(QMainWindow):
                 btn.setStyleSheet("color: #f1c40f; text-align: left; padding: 12px 15px; font-size: 15px; font-weight: bold;")
             elif "Crear" in txt:
                 btn.setStyleSheet("color: #3498db; text-align: left; padding: 12px 15px; font-size: 15px; font-weight: bold;")
+            elif "UI4" in txt:
+                btn.setStyleSheet("color: #2ecc71; text-align: left; padding: 12px 15px; font-size: 15px; font-weight: bold;")
                 
             if callback:
                 btn.clicked.connect(callback)
@@ -659,15 +677,6 @@ class MainWindow(QMainWindow):
     def launch_builder(self):
         try: subprocess.Popen([sys.executable, "builder.py"])
         except Exception as e: QMessageBox.critical(self, "Error", f"No se pudo abrir builder.py:\n{e}")
-
-    def launch_visor(self):
-        try: subprocess.Popen([sys.executable, "visor_monitor.py"])
-        except Exception as e: QMessageBox.critical(self, "Error", f"No se pudo abrir visor_monitor.py:\n{e}")
-
-    def closeEvent(self, event):
-        self.network_timer.stop()
-        self.cliente.cerrar()
-        super().closeEvent(event)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
