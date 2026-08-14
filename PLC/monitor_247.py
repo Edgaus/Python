@@ -166,10 +166,15 @@ def iniciar_servidor():
                 # Crear archivo de log
                 if not os.path.exists("historial"): os.makedirs("historial")
                 timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-                historial_csv_file = open(os.path.join("historial", f"historial_{timestamp}.csv"), 'w', newline='', encoding='utf-8')
+                # buffering=1 (line-buffered) so UI4 (historial_vivo.py) can tail rows in real time
+                historial_csv_file = open(
+                    os.path.join("historial", f"historial_{timestamp}.csv"),
+                    'w', newline='', encoding='utf-8', buffering=1
+                )
                 campos = ["Tiempo_Global(s)", "Ga", "Al", "In", "As", "N"]
                 csv_writer = csv.DictWriter(historial_csv_file, fieldnames=campos)
                 csv_writer.writeheader()
+                historial_csv_file.flush()
 
             elif comando == "pause":
                 is_paused = not is_paused
@@ -199,12 +204,13 @@ def iniciar_servidor():
                 print(f"📡 PLC COMANDO -> Celda {celda}: {'ABIERTO' if debe_abrir else 'CERRADO'}")
                 # hilo_plc.escribir_motor(celda, debe_abrir)
             
-            # Guardar CSV On-The-Fly
-            if csv_writer:
+            # Guardar CSV On-The-Fly (flush so UI4 can read live)
+            if csv_writer and historial_csv_file:
                 log_entry = {"Tiempo_Global(s)": round(resultados.get("tiempo_global", 0), 1)}
                 for el in ["Ga", "Al", "In", "As", "N"]:
                     log_entry[el] = "ABIERTA" if estado_luces.get(el, False) else "CERRADA"
                 csv_writer.writerow(log_entry)
+                historial_csv_file.flush()
 
             if resultados["terminado"]:
                 is_running = False

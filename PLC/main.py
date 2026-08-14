@@ -297,7 +297,8 @@ class MainWindow(QMainWindow):
         
         # Agregamos solo las que realmente utilizas (incluyendo Recetas e Historial con sus carpetas)
         menu_items = [
-            ("🕒 Historial", lambda: self.abrir_explorador("historial")),
+            ("🕒 Historial (carpeta)", lambda: self.abrir_explorador("historial")),
+            ("📈 Historial vivo (UI4)", self.launch_historial_vivo),
             ("📁 Cargar receta JSON", self.select_recipe_file),
             ("🛠️ Crear receta (Builder)", self.launch_builder)
         ]
@@ -309,6 +310,8 @@ class MainWindow(QMainWindow):
                 btn.setStyleSheet("color: #f1c40f; text-align: left; padding: 12px 15px; font-size: 15px; font-weight: bold;")
             elif "Crear" in txt:
                 btn.setStyleSheet("color: #3498db; text-align: left; padding: 12px 15px; font-size: 15px; font-weight: bold;")
+            elif "UI4" in txt:
+                btn.setStyleSheet("color: #2ecc71; text-align: left; padding: 12px 15px; font-size: 15px; font-weight: bold;")
                 
             if callback:
                 btn.clicked.connect(callback)
@@ -639,6 +642,12 @@ class MainWindow(QMainWindow):
     def launch_builder(self):
         try: subprocess.Popen([sys.executable, "builder.py"])
         except Exception as e: QMessageBox.critical(self, "Error", f"No se pudo abrir builder.py:\n{e}")
+
+    def launch_historial_vivo(self):
+        try:
+            subprocess.Popen([sys.executable, "historial_vivo.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo abrir historial_vivo.py:\n{e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
