@@ -19,15 +19,8 @@ SLOT = 1
 DB_RECETA = 10
 DB_SENSORES = 11
 
-<<<<<<< HEAD
-# Tiempos
+# --- Muestreo de sensores (plc_worker.py) ---
 # 200 ms is safe for Siemens S7 Snap7 reads (typical HMI poll is 100–250 ms).
 # Also fine if an Arduino sits as a bridge — this is only a sensor DB poll, not
 # a write storm. The growth sequencer in monitor_247.py ticks separately at ~50 ms.
 TIEMPO_MUESTREO_MS = 200
-=======
-# --- Muestreo de sensores (plc_worker.py) ---
-# 200–500 ms es un rango típico y seguro para HMI Siemens.
-# Si bajas mucho (<100 ms) aumentas carga de red sin mucho beneficio visual.
-TIEMPO_MUESTREO_MS = 500  # Medio segundo para leer datos del PLC
->>>>>>> origin/main
