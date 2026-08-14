@@ -1,0 +1,19 @@
+[
+    {
+        "paso": 1,
+        "material": "Dummy 9 celdas",
+        "comentario": "Receta dummy para mapear DB: Al Ga In N As Si Be Mn Mg",
+        "tiempo_total_crecimiento_sec": 90.0,
+        "parametros_celdas": {
+            "Al": {"mode": "Continuo", "manual_is_open": true},
+            "Ga": {"mode": "Ciclo", "t_shift": 0.0, "t_open": 5.0, "t_close": 5.0},
+            "In": {"mode": "Ciclo", "t_shift": 2.0, "t_open": 4.0, "t_close": 6.0},
+            "N":  {"mode": "Continuo", "manual_is_open": true},
+            "As": {"mode": "Continuo", "manual_is_open": false},
+            "Si": {"mode": "Ciclo", "t_shift": 1.0, "t_open": 2.0, "t_close": 8.0},
+            "Be": {"mode": "Continuo", "manual_is_open": false},
+            "Mn": {"mode": "Ciclo", "t_shift": 0.0, "t_open": 3.0, "t_close": 7.0},
+            "Mg": {"mode": "Continuo", "manual_is_open": true}
+        }
+    }
+]

@@ -5,11 +5,9 @@ import os
 import csv
 import datetime
 
-# =========================================================================
-# PREPARACIÓN PARA EL PLC
-# =========================================================================
-# import config
-# from plc_worker import MonitorPLCWorker
+import config
+from plc_client import PLCDriver
+
 
 class MotorSecuenciador:
     def __init__(self):
@@ -42,7 +40,7 @@ class MotorSecuenciador:
             if t_total > 0:
                 break
             self.indice_etapa += 1
-        
+
         if self.indice_etapa >= len(self.receta):
             self.proceso_terminado = True
 
@@ -60,12 +58,12 @@ class MotorSecuenciador:
             self.tiempo_etapa_actual = 0.0
             self.indice_etapa += 1
             self._saltar_etapas_vacias()
-            
+
             if self.proceso_terminado:
                 cambios = {celda: False for celda in self.estado_anterior_celdas if self.estado_anterior_celdas[celda]}
                 self.estado_anterior_celdas = {}
                 return {"terminado": True, "comandos_plc_nuevos": cambios, "estado_luces_ui": {}}
-            
+
             paso_actual = self.receta[self.indice_etapa]
 
         estado_actual = self._calcular_estado_celdas(paso_actual, self.tiempo_etapa_actual)
@@ -115,125 +113,275 @@ class MotorSecuenciador:
             return {}
         return self._calcular_estado_celdas(self.receta[self.indice_etapa], self.tiempo_etapa_actual)
 
-# =========================================================================
-# SERVIDOR UDP (MONITOR 24/7)
-# =========================================================================
-def iniciar_servidor():
-    print("Iniciando Monitor 24/7 (Backend SCADA)...")
-    motor = MotorSecuenciador()
-    # hilo_plc = MonitorPLCWorker() # Descomentar para Snap7
 
-    # Configuración de Sockets UDP (Comunicaciones de red local)
-    PUERTO_ESCUCHA = 5000  # Donde recibe órdenes del UI
-    PUERTO_HMI = 5001      # A donde envía el estado al UI
-    
-    sock_escucha = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock_escucha.bind(('127.0.0.1', PUERTO_ESCUCHA))
-    sock_escucha.setblocking(False) # No detener el programa esperando mensajes
+class VigilanteCeldas:
+    """Vigila apertura/cierre real de celdas, aunque no haya UI ni receta activa."""
 
-    sock_envio = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def __init__(self, plc):
+        self.plc = plc
+        self.estado_real = {celda: False for celda in config.CELDAS}
+        self.estado_deseado = {celda: False for celda in config.CELDAS}
+        self.lectura_ok = False
 
-    is_running = False
-    is_paused = False
-    historial_csv_file = None
-    csv_writer = None
+    def actualizar_deseado(self, estado_parcial):
+        for celda in config.CELDAS:
+            self.estado_deseado[celda] = bool(estado_parcial.get(celda, False))
 
-    tiempo_anterior = time.time()
-    
-    print(f"✅ Monitor activo y controlando el PLC. Escuchando en puerto {PUERTO_ESCUCHA}")
+    def aplicar_comandos(self, cambios):
+        for celda, debe_abrir in cambios.items():
+            etiqueta = "ABIERTO" if debe_abrir else "CERRADO"
+            print(f"📡 PLC COMANDO -> Celda {celda}: {etiqueta}")
+            self.plc.escribir_celda(celda, debe_abrir)
+            self.estado_deseado[celda] = bool(debe_abrir)
 
-    while True:
-        tiempo_actual = time.time()
-        delta_t = tiempo_actual - tiempo_anterior
-        tiempo_anterior = tiempo_actual
+    def cerrar_todas(self):
+        abiertas = {celda: False for celda, abierta in self.estado_real.items() if abierta}
+        abiertas.update({celda: False for celda, abierta in self.estado_deseado.items() if abierta})
+        if abiertas:
+            self.aplicar_comandos(abiertas)
+        self.actualizar_deseado({})
 
-        # 1. ESCUCHAR SI EL MAIN.PY MANDÓ ALGUNA ORDEN
+    def leer_hardware(self):
+        leido = self.plc.leer_estado_celdas()
+        if leido is None:
+            self.lectura_ok = False
+            return
+        self.lectura_ok = True
+        for celda in config.CELDAS:
+            if celda in leido:
+                self.estado_real[celda] = bool(leido[celda])
+
+    def snapshot(self):
+        return {
+            celda: {
+                "abierta": self.estado_real[celda],
+                "deseada": self.estado_deseado[celda],
+                "coincide": self.estado_real[celda] == self.estado_deseado[celda],
+            }
+            for celda in config.CELDAS
+        }
+
+    def luces_ui(self):
+        return {celda: self.estado_real[celda] for celda in config.CELDAS}
+
+
+class MonitorServidor:
+    def __init__(self):
+        self.motor = MotorSecuenciador()
+        self.plc = PLCDriver(config.PLC_IP, config.RACK, config.SLOT)
+        self.vigilante = VigilanteCeldas(self.plc)
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            data, addr = sock_escucha.recvfrom(65535)
-            mensaje = json.loads(data.decode('utf-8'))
-            comando = mensaje.get("cmd")
+            self.sock.bind((config.MONITOR_HOST, config.MONITOR_PUERTO))
+        except OSError as e:
+            raise OSError(
+                f"No se pudo abrir {config.MONITOR_HOST}:{config.MONITOR_PUERTO}. "
+                f"Cambia MONITOR_PUERTO en config.py si el puerto está ocupado o reservado por Windows. ({e})"
+            ) from e
+        self.sock.setblocking(False)
 
-            if comando == "load":
-                motor.cargar_receta(mensaje.get("recipe", []))
-                is_running = False
-                is_paused = False
-                print("📂 Nueva receta cargada en el motor.")
-            elif comando == "start":
-                is_running = True
-                is_paused = False
-                print("▶ Iniciar proceso ordenado por UI.")
-                
-                # Crear archivo de log
-                if not os.path.exists("historial"): os.makedirs("historial")
-                timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-                historial_csv_file = open(os.path.join("historial", f"historial_{timestamp}.csv"), 'w', newline='', encoding='utf-8')
-                campos = ["Tiempo_Global(s)", "Ga", "Al", "In", "As", "N"]
-                csv_writer = csv.DictWriter(historial_csv_file, fieldnames=campos)
-                csv_writer.writeheader()
+        self.is_running = False
+        self.is_paused = False
+        self.historial_csv_file = None
+        self.csv_writer = None
+        self.resultados = self._resultados_idle()
+        self._ultimo_muestreo = 0.0
 
-            elif comando == "pause":
-                is_paused = not is_paused
-                print("⏸ Pausa alternada.")
-            elif comando == "stop":
-                is_running = False
-                is_paused = False
-                motor.reiniciar()
-                if historial_csv_file: historial_csv_file.close()
-                print("⏹ Proceso detenido.")
-            elif comando == "update_recipe":
-                motor.modificar_receta(mensaje.get("recipe", []))
-                print("🔄 ¡Modificación en tiempo real inyectada!")
+    def _resultados_idle(self):
+        return {
+            "terminado": self.motor.proceso_terminado,
+            "indice_etapa": self.motor.indice_etapa,
+            "tiempo_etapa_actual": self.motor.tiempo_etapa_actual,
+            "tiempo_global": self.motor.tiempo_global,
+            "estado_luces_ui": {},
+            "comandos_plc_nuevos": {},
+        }
 
+    def paquete_estado(self):
+        resultados = dict(self.resultados)
+        resultados["estado_luces_ui"] = self.vigilante.luces_ui()
+        return {
+            "type": "status",
+            "plc_conectado": self.plc.esta_conectado() and self.vigilante.lectura_ok,
+            "modo_simulacion": self.plc.simular,
+            "error_plc": self.plc.ultimo_error,
+            "is_running": self.is_running,
+            "is_paused": self.is_paused,
+            "receta_actual": self.motor.receta,
+            "resultados_motor": resultados,
+            "celdas": self.vigilante.snapshot(),
+            "receta_en_plc": self.plc.receta_enviada,
+            "timestamp": time.time(),
+        }
+
+    def responder(self, addr):
+        try:
+            self.sock.sendto(json.dumps(self.paquete_estado()).encode("utf-8"), addr)
+        except Exception:
+            pass
+
+    def _cerrar_csv(self):
+        if self.historial_csv_file:
+            try:
+                self.historial_csv_file.close()
+            except Exception:
+                pass
+            self.historial_csv_file = None
+            self.csv_writer = None
+
+    def _abrir_csv(self):
+        self._cerrar_csv()
+        if not os.path.exists("historial"):
+            os.makedirs("historial")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        ruta = os.path.join("historial", f"historial_{timestamp}.csv")
+        self.historial_csv_file = open(ruta, "w", newline="", encoding="utf-8")
+        campos = ["Tiempo_Global(s)"] + list(config.CELDAS)
+        self.csv_writer = csv.DictWriter(self.historial_csv_file, fieldnames=campos)
+        self.csv_writer.writeheader()
+
+    def procesar_comando(self, mensaje, addr):
+        comando = mensaje.get("cmd")
+
+        if comando == "get_status":
+            self.responder(addr)
+            return
+
+        if comando == "load":
+            receta = mensaje.get("recipe", [])
+            self.motor.cargar_receta(receta)
+            self.is_running = False
+            self.is_paused = False
+            self.plc.escribir_receta(receta)
+            print("📂 Receta cargada en el motor y enviada al PLC (DB dummy).")
+        elif comando == "start":
+            if self.motor.receta:
+                self.plc.escribir_receta(self.motor.receta)
+            self.plc.pulso_control(config.CTRL_START)
+            self.plc.escribir_pause(False)
+            self.is_running = True
+            self.is_paused = False
+            print("▶ Start: receta en PLC + bandera Start. El PLC ejecuta los tiempos.")
+            self._abrir_csv()
+        elif comando == "pause":
+            self.is_paused = not self.is_paused
+            self.plc.escribir_pause(self.is_paused)
+            print("⏸ Pausa alternada (bandera Pause al PLC).")
+        elif comando == "stop":
+            self.plc.pulso_control(config.CTRL_STOP)
+            if self.plc.simular:
+                self.vigilante.cerrar_todas()
+            self.is_running = False
+            self.is_paused = False
+            self.motor.reiniciar()
+            self._cerrar_csv()
+            print("⏹ Stop enviado al PLC. En simulación se cierran celdas locales.")
+        elif comando == "update_recipe":
+            receta = mensaje.get("recipe", [])
+            self.motor.modificar_receta(receta)
+            self.plc.escribir_receta(receta)
+            self.plc.pulso_control(config.CTRL_RECIPE_UPDATED)
+            print("🔄 Receta actualizada en Python y reescrita en el PLC.")
+        else:
+            print(f"Comando desconocido: {comando}")
+
+        self.responder(addr)
+
+    def drenar_comandos(self):
+        try:
+            while True:
+                data, addr = self.sock.recvfrom(65535)
+                try:
+                    mensaje = json.loads(data.decode("utf-8"))
+                    self.procesar_comando(mensaje, addr)
+                except Exception as e:
+                    print(f"Error procesando comando de UI: {e}")
         except BlockingIOError:
-            pass # No hay mensajes nuevos, seguimos adelante
-        except Exception as e:
-            print(f"Error procesando comando de UI: {e}")
+            pass
 
-        # 2. CALCULAR MOTOR Y MANDAR AL PLC
-        if is_running and not is_paused:
-            resultados = motor.procesar_tick(delta_t)
-            estado_luces = resultados.get("estado_luces_ui", {})
-            
-            # Comunicar al PLC los cambios (Hardware real)
-            for celda, debe_abrir in resultados.get("comandos_plc_nuevos", {}).items():
-                print(f"📡 PLC COMANDO -> Celda {celda}: {'ABIERTO' if debe_abrir else 'CERRADO'}")
-                # hilo_plc.escribir_motor(celda, debe_abrir)
-            
-            # Guardar CSV On-The-Fly
-            if csv_writer:
-                log_entry = {"Tiempo_Global(s)": round(resultados.get("tiempo_global", 0), 1)}
-                for el in ["Ga", "Al", "In", "As", "N"]:
-                    log_entry[el] = "ABIERTA" if estado_luces.get(el, False) else "CERRADA"
-                csv_writer.writerow(log_entry)
+    def _muestrear_plc_si_toca(self, ahora):
+        periodo = config.TIEMPO_MUESTREO_MS / 1000.0
+        if ahora - self._ultimo_muestreo < periodo:
+            return
+        self._ultimo_muestreo = ahora
+        self.vigilante.leer_hardware()
+        progreso = self.plc.leer_progreso_receta()
+        if progreso and not self.plc.simular:
+            self.resultados["tiempo_global"] = progreso.get("tiempo_global", self.resultados.get("tiempo_global", 0))
+            self.resultados["tiempo_etapa_actual"] = progreso.get("tiempo_etapa", self.resultados.get("tiempo_etapa_actual", 0))
+            self.resultados["indice_etapa"] = progreso.get("etapa_activa", self.resultados.get("indice_etapa", 0))
 
-            if resultados["terminado"]:
-                is_running = False
-                if historial_csv_file: historial_csv_file.close()
+    def tick_proceso(self, delta_t, ahora):
+        if self.is_running and not self.is_paused:
+            self.resultados = self.motor.procesar_tick(delta_t)
+            self.vigilante.actualizar_deseado(self.resultados.get("estado_luces_ui", {}))
+            # Híbrido: en simulación Python mueve las celdas; en PLC real solo se supervisa.
+            if self.plc.simular:
+                self.vigilante.aplicar_comandos(self.resultados.get("comandos_plc_nuevos", {}))
+
+            if self.csv_writer:
+                log_entry = {"Tiempo_Global(s)": round(self.resultados.get("tiempo_global", 0), 1)}
+                for el in config.CELDAS:
+                    log_entry[el] = "ABIERTA" if self.vigilante.estado_real.get(el, False) else "CERRADA"
+                self.csv_writer.writerow(log_entry)
+
+            if self.resultados.get("terminado"):
+                self.plc.pulso_control(config.CTRL_STOP)
+                if self.plc.simular:
+                    self.vigilante.cerrar_todas()
+                self.is_running = False
+                self._cerrar_csv()
                 print("✅ Proceso completado con éxito.")
         else:
-            # Si estamos detenidos o pausados, calculamos la "foto" actual estática
-            estado_luces = motor.obtener_estado_estatico()
-            resultados = {
-                "terminado": motor.proceso_terminado,
-                "indice_etapa": motor.indice_etapa,
-                "tiempo_etapa_actual": motor.tiempo_etapa_actual,
-                "tiempo_global": motor.tiempo_global,
-                "estado_luces_ui": estado_luces
+            estado_deseado = self.motor.obtener_estado_estatico() if self.is_paused else {}
+            if not self.is_running:
+                estado_deseado = {}
+            self.vigilante.actualizar_deseado(estado_deseado)
+            self.resultados = {
+                "terminado": self.motor.proceso_terminado,
+                "indice_etapa": self.motor.indice_etapa,
+                "tiempo_etapa_actual": self.motor.tiempo_etapa_actual,
+                "tiempo_global": self.motor.tiempo_global,
+                "estado_luces_ui": estado_deseado,
+                "comandos_plc_nuevos": {},
             }
 
-        # 3. ENVIAR REPORTE AL MAIN.PY
-        paquete_estado = {
-            "is_running": is_running,
-            "is_paused": is_paused,
-            "receta_actual": motor.receta,
-            "resultados_motor": resultados
-        }
-        try:
-            sock_envio.sendto(json.dumps(paquete_estado).encode('utf-8'), ('127.0.0.1', PUERTO_HMI))
-        except Exception as e:
-            pass # Ignoramos si el main no está abierto
+        self._muestrear_plc_si_toca(ahora)
 
-        time.sleep(0.05) # Ejecutar 20 veces por segundo
+    def run(self):
+        print("Iniciando Monitor 24/7 (híbrido: receta al PLC, supervisión en Python)...")
+        if not self.plc.conectar():
+            print("⚠ Sin PLC: el monitor sigue activo y responde consultas.")
+        self.vigilante.leer_hardware()
+        self._ultimo_muestreo = time.time()
+        print(f"✅ Monitor escuchando en {config.MONITOR_HOST}:{config.MONITOR_PUERTO}")
+        print(f"   Celdas dummy: {', '.join(config.CELDAS)}")
+        print(f"   Snap7 cada {config.TIEMPO_MUESTREO_MS} ms (1 lectura de {config.CELDAS_BYTES} bytes).")
+        print("   Las UIs preguntan con cmd=get_status.")
+
+        tiempo_anterior = time.time()
+        try:
+            while True:
+                ahora = time.time()
+                delta_t = ahora - tiempo_anterior
+                tiempo_anterior = ahora
+
+                self.drenar_comandos()
+                self.tick_proceso(delta_t, ahora)
+                time.sleep(config.CICLO_MONITOR_S)
+        except KeyboardInterrupt:
+            print("\nMonitor detenido por teclado.")
+        finally:
+            self.vigilante.cerrar_todas()
+            self._cerrar_csv()
+            self.sock.close()
+
+
+def iniciar_servidor():
+    MonitorServidor().run()
+
 
 if __name__ == "__main__":
     iniciar_servidor()
