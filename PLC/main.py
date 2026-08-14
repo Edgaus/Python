@@ -678,6 +678,14 @@ class MainWindow(QMainWindow):
         try: subprocess.Popen([sys.executable, "builder.py"])
         except Exception as e: QMessageBox.critical(self, "Error", f"No se pudo abrir builder.py:\n{e}")
 
+    def launch_historial_vivo(self):
+        try: subprocess.Popen([sys.executable, "historial_vivo.py"])
+        except Exception as e: QMessageBox.critical(self, "Error", f"No se pudo abrir historial_vivo.py:\n{e}")
+
+    def launch_visor(self):
+        try: subprocess.Popen([sys.executable, "visor_monitor.py"])
+        except Exception as e: QMessageBox.critical(self, "Error", f"No se pudo abrir visor_monitor.py:\n{e}")
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     recipe_arg = sys.argv[1] if len(sys.argv) > 1 else None
