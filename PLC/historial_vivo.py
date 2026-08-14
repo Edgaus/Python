@@ -1,13 +1,18 @@
 """
-UI4 — Historial vivo
+historial_vivo.py — UI4: línea de tiempo de la REALIDAD (CSV del monitor)
 
-Builds a real-time timeline from the CSV that monitor_247.py writes while a
-growth run is in progress (realidad), as opposed to main.py's TimelineWidget
-which draws the planned recipe (plan).
+Lee (y sigue en vivo) los archivos PLC/historial/historial_*.csv que escribe
+monitor_247.py. Cada fila del CSV es un instante con Ga/Al/In/As/N en
+ABIERTA|CERRADA — la misma información que tu amigo usará en la tabla SQL
+de monitoreo (ver README.md).
 
-Usage:
+Contraste:
+  UI2 (main.py TimelineWidget) = PLAN de la receta JSON
+  UI4 (este archivo)           = REALIDAD medida/logueada en el CSV
+
+Lanzar:
   cd PLC && ../.venv/bin/python historial_vivo.py
-  # optional: pass a CSV path as argv[1]
+  # opcional: pasar ruta a un CSV como argv[1]
 """
 import csv
 import glob

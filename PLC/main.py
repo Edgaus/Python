@@ -1,3 +1,18 @@
+"""
+main.py — HMI del operador (hoy mezcla UI2 + UI3 en una sola ventana)
+
+UI2 = TimelineWidget: línea de tiempo del PLAN (receta JSON).
+UI3 = panel inferior + botones: luces abiertas/cerradas "ahora",
+      INICIAR / PAUSAR / DETENER, desbloqueo para editar en vivo.
+
+Estado actual: "Modo Visual" — los sockets UDP hacia monitor_247.py están
+comentados, así que puedes cargar una receta y ver la gráfica sin el cerebro.
+Cuando se rehabiliten, enviar_comando() hablará con 127.0.0.1:5000 y
+escuchar_backend() leerá el estado en :5001.
+
+Lanzar:  cd PLC && ../.venv/bin/python main.py
+Desde el menú lateral también se abren builder.py (UI1) e historial_vivo.py (UI4).
+"""
 import sys
 import json
 import subprocess
@@ -12,11 +27,10 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
-# Importamos la hoja de estilos desde tu archivo separado
 from styles import MAIN_STYLE_SHEET
 
 # =========================================================================
-# WIDGET GRÁFICO DE LÍNEA DE TIEMPO (Sin estela karaoke)
+# UI2 — WIDGET: línea de tiempo del PLAN (receta), no del CSV
 # =========================================================================
 class TimelineWidget(QWidget):
     def __init__(self, parent=None):
@@ -171,7 +185,7 @@ class TimelineWidget(QWidget):
             p.drawText(int(playhead_x) - 20, top - 15, "Ahora")
 
 # =========================================================================
-# VENTANA PRINCIPAL (CLIENTE DEL MONITOR SCADA)
+# UI2 + UI3 — Ventana principal (cliente del monitor SCADA)
 # =========================================================================
 class MainWindow(QMainWindow):
     def __init__(self, recipe_path=None):

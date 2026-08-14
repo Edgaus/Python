@@ -1,4 +1,8 @@
 # styles.py
+"""
+Estilos Qt compartidos (PyQt StyleSheet) para main.py e historial_vivo.py.
+No contiene lógica de control ni de PLC — solo apariencia.
+"""
 
 MAIN_STYLE_SHEET = """
 QMainWindow { background: #dbe9f6; }

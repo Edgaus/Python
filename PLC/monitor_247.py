@@ -1,3 +1,20 @@
+"""
+monitor_247.py — Cerebro 4 + Cerebro 5 (el proceso que no se apaga)
+
+Cerebro 4 = MotorSecuenciador: con la receta cargada, en cada tick calcula
+  qué celdas (Ga/Al/In/As/N) deben estar ABIERTAS o CERRADAS.
+Cerebro 5 = iniciar_servidor(): bucle UDP 24/7 que
+  - escucha comandos en 127.0.0.1:5000  (load / start / pause / stop / update_recipe)
+  - publica estado en 127.0.0.1:5001
+  - escribe historial/historial_*.csv  ← fuente para la DB de monitoreo
+  - (opcional) manda órdenes al PLC Siemens vía Snap7
+
+Cómo probar solo:
+  cd PLC && ../.venv/bin/python monitor_247.py
+
+Para tu amigo (DB): mira el bloque "Guardar CSV On-The-Fly" más abajo.
+Ahí sale cada muestra de apertura/cierre; ese es el sitio natural para un INSERT.
+"""
 import socket
 import json
 import time
@@ -6,11 +23,14 @@ import csv
 import datetime
 
 # =========================================================================
-# PREPARACIÓN PARA EL PLC
+# PREPARACIÓN PARA EL PLC (hoy comentado: sin hardware / sin libsnap7)
 # =========================================================================
 # import config
 # from plc_worker import MonitorPLCWorker
 
+# =========================================================================
+# CEREBRO 4 — Secuenciador de la receta (decide abrir/cerrar)
+# =========================================================================
 class MotorSecuenciador:
     def __init__(self):
         self.receta = []
@@ -116,14 +136,14 @@ class MotorSecuenciador:
         return self._calcular_estado_celdas(self.receta[self.indice_etapa], self.tiempo_etapa_actual)
 
 # =========================================================================
-# SERVIDOR UDP (MONITOR 24/7)
+# CEREBRO 5 — Servidor UDP 24/7 (no se apaga)
 # =========================================================================
 def iniciar_servidor():
     print("Iniciando Monitor 24/7 (Backend SCADA)...")
     motor = MotorSecuenciador()
-    # hilo_plc = MonitorPLCWorker() # Descomentar para Snap7
+    # hilo_plc = MonitorPLCWorker() # Descomentar para Snap7 / sensores
 
-    # Configuración de Sockets UDP (Comunicaciones de red local)
+    # Configuración de Sockets UDP (comunicaciones locales UI ↔ cerebro)
     PUERTO_ESCUCHA = 5000  # Donde recibe órdenes del UI
     PUERTO_HMI = 5001      # A donde envía el estado al UI
     
@@ -204,7 +224,13 @@ def iniciar_servidor():
                 print(f"📡 PLC COMANDO -> Celda {celda}: {'ABIERTO' if debe_abrir else 'CERRADO'}")
                 # hilo_plc.escribir_motor(celda, debe_abrir)
             
-            # Guardar CSV On-The-Fly (flush so UI4 can read live)
+            # -----------------------------------------------------------------
+            # HISTORIAL / MONITOREO
+            # Cada fila = un instante: Tiempo_Global(s), Ga, Al, In, As, N
+            # con valores ABIERTA|CERRADA. Flush para UI4 y futuros importers a DB.
+            # Si montas una tabla SQL, este es el punto ideal para INSERT además
+            # (o en lugar) del CSV. Ver README.md sección "base de datos".
+            # -----------------------------------------------------------------
             if csv_writer and historial_csv_file:
                 log_entry = {"Tiempo_Global(s)": round(resultados.get("tiempo_global", 0), 1)}
                 for el in ["Ga", "Al", "In", "As", "N"]:
