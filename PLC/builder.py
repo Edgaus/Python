@@ -1,3 +1,15 @@
+"""
+builder.py — UI1: editor visual de recetas MBE
+
+Aquí se apilan capas (sustrato, AlN, GaAs, …), se elige modo Continuo/Ciclo
+y tiempos S/O/C, y se exporta un JSON a recetas/ o Recetario/.
+
+Ese JSON es el PLAN. Quien ejecuta el plan es monitor_247.py (cerebro).
+main.py lo visualiza; historial_vivo.py muestra lo que realmente ocurrió (CSV).
+
+Lanzar:  cd PLC && ../.venv/bin/python builder.py
+También se abre desde el menú de main.py.
+"""
 import sys
 import json
 import subprocess
@@ -14,7 +26,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QFont, QPainter
 from PyQt6.QtWidgets import QStyle
 
 # ==========================================
-# HOJA DE ESTILOS GLOBAL 
+# HOJA DE ESTILOS GLOBAL (local a este UI)
 # ==========================================
 STYLE_SHEET = """
 QMainWindow {

@@ -36,7 +36,8 @@ Python is 3.12. There is no web server, database, or shared build system.
 | Process | Command | Role |
 |---|---|---|
 | Backend sequencer | `cd PLC && ../.venv/bin/python monitor_247.py` | UDP server: commands on `127.0.0.1:5000`, state on `127.0.0.1:5001`; CSV logs → `PLC/historial/` (gitignored) |
-| Operator HMI | `cd PLC && DISPLAY=:1 ../.venv/bin/python main.py` | Load recipes, timeline, start/pause/stop. Needs display `:1` in cloud VMs |
+| Operator HMI | `cd PLC && DISPLAY=:1 ../.venv/bin/python main.py` | Load recipes, timeline (plan), start/pause/stop. Needs display `:1` in cloud VMs |
+| Historial vivo (UI4) | `cd PLC && DISPLAY=:1 ../.venv/bin/python historial_vivo.py` | Real-time timeline from `historial/*.csv` that the monitor writes (realidad). Also launchable from main sidebar |
 | Recipe builder (optional) | `cd PLC && DISPLAY=:1 ../.venv/bin/python builder.py` | Visual editor; also launchable from `main.py` via subprocess |
 
 **File roles:** `builder.py` (recipe editor) → JSON in `recetas/` / `Recetario/` →
@@ -58,6 +59,9 @@ via `plc_client.py` / `plc_worker.py` → Siemens S7 (`config.py`: IP / rack / s
 3. **Core hello-world action:** load a JSON recipe from `PLC/recetas/` (e.g.
    `receta_actual.json`) and confirm the growth timeline renders with per-cell
    colored bars.
+4. **UI2 vs UI4:** `main.py` TimelineWidget = planned recipe (JSON). 
+   `historial_vivo.py` = reality timeline built by tailing the CSV that
+   `monitor_247.py` writes (with `flush` after each row so the UI can follow live).
 
 ### Out of scope (unless user asks)
 
