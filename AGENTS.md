@@ -35,7 +35,7 @@ Python is 3.12. There is no web server, database, or shared build system.
 
 | Process | Command | Role |
 |---|---|---|
-| Backend sequencer | `cd PLC && ../.venv/bin/python monitor_247.py` | UDP server: commands on `127.0.0.1:5000`, state on `127.0.0.1:5001`; CSV logs → `PLC/historial/` (gitignored) |
+| Backend sequencer | `cd PLC && ../.venv/bin/python monitor_247.py` | UDP server on a single socket `127.0.0.1:25000` (`config.MONITOR_HOST`/`MONITOR_PUERTO`): send JSON commands there, monitor replies status to the sender's address; CSV logs → `PLC/historial/` (gitignored) |
 | Operator HMI | `cd PLC && DISPLAY=:1 ../.venv/bin/python main.py` | Load recipes, timeline (plan), start/pause/stop. Needs display `:1` in cloud VMs |
 | Historial vivo (UI4) | `cd PLC && DISPLAY=:1 ../.venv/bin/python historial_vivo.py` | Real-time timeline from `historial/*.csv` that the monitor writes (realidad). Also launchable from main sidebar |
 | Recipe builder (optional) | `cd PLC && DISPLAY=:1 ../.venv/bin/python builder.py` | Visual editor; also launchable from `main.py` via subprocess |
@@ -50,8 +50,9 @@ via `plc_client.py` / `plc_worker.py` → Siemens S7 (`config.py`: IP / rack / s
 1. **UDP is commented out in `main.py` ("Modo Visual").** The GUI currently
    visualizes recipes locally and does **not** talk to `monitor_247.py`. To
    exercise the backend end-to-end, send UDP JSON commands (`load`, `start`,
-   `pause`, `stop`, `update_recipe`) to port 5000 directly. Snap7/`MonitorPLCWorker`
-   is also commented out in `monitor_247.py`.
+   `pause`, `stop`, `update_recipe`, `get_status`) to the single monitor port
+   `127.0.0.1:25000` (from `config.py`, not 5000/5001); it replies status to the
+   sender. Snap7/`MonitorPLCWorker` is also commented out in `monitor_247.py`.
 2. **Two recipe shapes.** On disk: `name`, `growth_time`, `element_data`.
    Engine expects: `material`, `tiempo_total_crecimiento_sec`, `parametros_celdas`.
    `main.py`'s `normalize_step()` converts before send — keep that in mind if
