@@ -18,7 +18,7 @@ import json
 import subprocess
 import os
 import copy
-import time
+import socket
 import platform
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QGroupBox, 
@@ -28,8 +28,6 @@ from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
 from styles import MAIN_STYLE_SHEET
-from monitor_client import MonitorCliente
-import config
 
 # =========================================================================
 # UI2 — WIDGET: línea de tiempo del PLAN (receta), no del CSV
@@ -45,15 +43,11 @@ class TimelineWidget(QWidget):
         self.active_cells = {}
         
         self.element_colors = {
-            "Al": QColor(40, 170, 90),
             "Ga": QColor(50, 120, 220),
+            "Al": QColor(40, 170, 90),
             "In": QColor(255, 150, 40),
-            "N":  QColor(150, 50, 220),
             "As": QColor(220, 50, 50),
-            "Si": QColor(90, 90, 90),
-            "Be": QColor(180, 140, 40),
-            "Mn": QColor(140, 80, 40),
-            "Mg": QColor(80, 180, 180),
+            "N":  QColor(150, 50, 220)
         }
 
     def format_time_label(self, seconds):
@@ -196,7 +190,7 @@ class TimelineWidget(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self, recipe_path=None):
         super().__init__()
-        self.setWindowTitle("MBE Control - Cliente del Monitor 24/7")
+        self.setWindowTitle("MBE Control - Monitor Remoto (Modo Visual)")
         self.resize(1350, 800)
         self.setStyleSheet(MAIN_STYLE_SHEET)
 
@@ -207,62 +201,61 @@ class MainWindow(QMainWindow):
         self.last_drawn_step_index = -1
         self.last_drawn_lock_state = None
         self.cell_widgets = {}
-        self.monitor_online = False
-        self.ultimo_contacto = time.time()
-        self.fin_ya_notificado = False
 
-        self.cliente = MonitorCliente()
-        self.network_timer = QTimer(self)
-        self.network_timer.setInterval(100)
-        self.network_timer.timeout.connect(self.consultar_monitor)
-        self.network_timer.start()
+        # -----------------------------------------------------------------
+        # LÍNEAS COMENTADAS PARA PODER PROBAR LA INTERFAZ VISUAL AISLADA
+        # -----------------------------------------------------------------
+        # self.DIR_MONITOR_247 = ('127.0.0.1', 5000) 
+        
+        # self.sock_comandos = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        
+        # self.sock_escucha = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # self.sock_escucha.bind(('127.0.0.1', 5001)) 
+        # self.sock_escucha.setblocking(False)
+
+        # self.network_timer = QTimer(self)
+        # self.network_timer.setInterval(50)
+        # self.network_timer.timeout.connect(self.escuchar_backend)
+        # self.network_timer.start()
+        # -----------------------------------------------------------------
 
         self.buildUI()
-        self.cliente.pedir_estado()
 
         if recipe_path and os.path.exists(recipe_path):
             self.load_recipe_from_file(recipe_path)
 
     def enviar_comando(self, diccionario_comando):
-        if not self.cliente.enviar(diccionario_comando):
-            print("No se pudo enviar el comando al Monitor 24/7.")
+        """Mokcup de envío de comandos para no crashear la UI en pruebas visuales"""
+        print(f"📡 [Simulación de Red] Comando listo para enviar al backend: {diccionario_comando}")
+        # try:
+        #     mensaje = json.dumps(diccionario_comando).encode('utf-8')
+        #     self.sock_comandos.sendto(mensaje, self.DIR_MONITOR_247)
+        # except Exception as e:
+        #     print("Error al enviar comando al Monitor:", e)
 
-    def consultar_monitor(self):
-        estado = self.cliente.recibir()
-        if estado:
-            self.monitor_online = True
-            self.ultimo_contacto = time.time()
-            self.procesar_estado_red(estado)
-        elif time.time() - self.ultimo_contacto > config.TIMEOUT_UI_S:
-            if self.monitor_online:
-                self.monitor_online = False
-                self.lbl_conexion.setText("Monitor 24/7 no responde. Ejecuta monitor_247.py")
-                self.lbl_conexion.setStyleSheet("color: #e74c3c; font-weight: bold;")
-        self.cliente.pedir_estado()
+    def escuchar_backend(self):
+        """Comentado temporalmente para pruebas visuales"""
+        pass
+        # try:
+        #     while True:
+        #         data, _ = self.sock_escucha.recvfrom(65535)
+        #         estado = json.loads(data.decode('utf-8'))
+        #         self.procesar_estado_red(estado)
+        # except BlockingIOError:
+        #     pass 
+        # except Exception as e:
+        #     print("Error recibiendo datos del Backend:", e)
 
     def procesar_estado_red(self, estado):
-        modo = "simulación" if estado.get("modo_simulacion") else "PLC"
-        self.lbl_conexion.setText(f"Monitor en línea ({modo})")
-        self.lbl_conexion.setStyleSheet("color: #27ae60; font-weight: bold;")
-
+        """Procesa el estado dictado por el backend"""
         if not self.is_unlocked:
-            receta = estado.get("receta_actual") or []
-            if receta:
-                self.recipe_data = receta
-
+            self.recipe_data = estado.get("receta_actual", [])
+            
         resultados = estado.get("resultados_motor", {})
         is_running = estado.get("is_running", False)
         is_paused = estado.get("is_paused", False)
 
-        celdas = estado.get("celdas") or {}
-        if celdas:
-            resultados = dict(resultados)
-            resultados["estado_luces_ui"] = {
-                nombre: bool(info.get("abierta", False)) for nombre, info in celdas.items()
-            }
-
         if is_running:
-            self.fin_ya_notificado = False
             self.btn_start.setVisible(False)
             self.btn_pause.setVisible(True)
             self.btn_stop.setVisible(True)
@@ -272,10 +265,8 @@ class MainWindow(QMainWindow):
             self.btn_pause.setVisible(False)
             self.btn_stop.setVisible(False)
 
-        if resultados.get("terminado", False) and not is_running and self.recipe_data and not self.fin_ya_notificado:
-            if float(resultados.get("tiempo_global", 0)) > 0:
-                self.fin_ya_notificado = True
-                QMessageBox.information(self, "Proceso Completado", "El Monitor 24/7 reporta que el proceso ha finalizado.")
+        if resultados.get("terminado", False) and is_running:
+            QMessageBox.information(self, "Proceso Completado", "¡El Monitor 24/7 reporta que el proceso ha finalizado!")
 
         self.update_step_display(resultados)
 
@@ -321,10 +312,12 @@ class MainWindow(QMainWindow):
         # Agregamos solo las que realmente utilizas (incluyendo Recetas e Historial con sus carpetas)
         menu_items = [
             ("🕒 Historial (carpeta)", lambda: self.abrir_explorador("historial")),
-            ("📈 Historial vivo (UI4)", self.launch_historial_vivo),
+            # UI4 (historial vivo) queda deshabilitado por ahora para que main.py
+            # funcione 100% en modo visual sin depender de una función externa.
+            # Cuando quieras volver a UI4, descomenta esta línea:
+            # ("📈 Historial vivo (UI4)", self.launch_historial_vivo),
             ("📁 Cargar receta JSON", self.select_recipe_file),
-            ("🛠️ Crear receta (Builder)", self.launch_builder),
-            ("👁 Visor de celdas", self.launch_visor),
+            ("🛠️ Crear receta (Builder)", self.launch_builder)
         ]
 
         for txt, callback in menu_items:
@@ -353,13 +346,9 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout(right_panel)
         main_layout.setContentsMargins(20, 20, 20, 20)
 
-        titulo = QLabel("Programa de crecimiento (cliente del Monitor)")
+        titulo = QLabel("Programa de crecimiento (Monitor Remoto)")
         titulo.setStyleSheet("font-size: 26px; font-weight: bold; color: #0d2a52;")
         main_layout.addWidget(titulo)
-
-        self.lbl_conexion = QLabel("Buscando Monitor 24/7...")
-        self.lbl_conexion.setStyleSheet("color: #7f8c8d; font-weight: bold;")
-        main_layout.addWidget(self.lbl_conexion)
 
         self.timeline = TimelineWidget()
         main_layout.addWidget(self.timeline)
@@ -493,7 +482,7 @@ class MainWindow(QMainWindow):
             if 0 <= idx < len(self.recipe_data):
                 self.recipe_data[idx] = copy.deepcopy(self.temp_step_data)
                 self.enviar_comando({"cmd": "update_recipe", "recipe": self.recipe_data})
-                QMessageBox.information(self, "Monitor", "Cambios enviados al Monitor 24/7.")
+                QMessageBox.information(self, "Simulación", "Se simularon las modificaciones en modo visual.")
 
     def select_recipe_file(self):
         ruta = os.path.abspath("recetas")
@@ -514,7 +503,7 @@ class MainWindow(QMainWindow):
             self.timeline.set_recipe_data(self.recipe_data, total)
             self.refresh_cells_ui(self.recipe_data[0] if self.recipe_data else None, {}, 0)
             
-            QMessageBox.information(self, "Receta", f"Receta '{os.path.basename(file_path)}' enviada al Monitor 24/7.")
+            QMessageBox.information(self, "Simulación", f"Receta '{os.path.basename(file_path)}' cargada en la vista.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo leer el archivo JSON:\n{e}")
 
@@ -533,7 +522,7 @@ class MainWindow(QMainWindow):
             if self.recipe_data:
                 total = sum(float(s.get("tiempo_total_crecimiento_sec", 0)) for s in self.recipe_data)
                 self.timeline.set_recipe_data(self.recipe_data, total)
-            self.refresh_cells_ui(None, estado_luces, -2)
+            self.refresh_cells_ui(None, estado_luces, indice_backend)
             return
 
         if indice_backend < len(self.recipe_data):
@@ -565,19 +554,12 @@ class MainWindow(QMainWindow):
 
     def refresh_cells_ui(self, step, active_states, current_index):
         if not step:
-            if active_states:
-                step = {
-                    "parametros_celdas": {
-                        el: {"mode": "Continuo"} for el in config.CELDAS
-                    }
-                }
-            else:
-                while self.cells_layout.count():
-                    item = self.cells_layout.takeAt(0)
-                    if item.widget(): item.widget().deleteLater()
-                self.cell_widgets.clear()
-                self.timeline.set_active_cells({})
-                return
+            while self.cells_layout.count():
+                item = self.cells_layout.takeAt(0)
+                if item.widget(): item.widget().deleteLater()
+            self.cell_widgets.clear()
+            self.timeline.set_active_cells({}) 
+            return
 
         if self.last_drawn_step_index != current_index or self.last_drawn_lock_state != self.is_unlocked:
             while self.cells_layout.count():
@@ -677,6 +659,12 @@ class MainWindow(QMainWindow):
     def launch_builder(self):
         try: subprocess.Popen([sys.executable, "builder.py"])
         except Exception as e: QMessageBox.critical(self, "Error", f"No se pudo abrir builder.py:\n{e}")
+
+    def launch_historial_vivo(self):
+        try:
+            subprocess.Popen([sys.executable, "historial_vivo.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo abrir historial_vivo.py:\n{e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
