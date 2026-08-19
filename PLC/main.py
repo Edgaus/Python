@@ -312,7 +312,10 @@ class MainWindow(QMainWindow):
         # Agregamos solo las que realmente utilizas (incluyendo Recetas e Historial con sus carpetas)
         menu_items = [
             ("🕒 Historial (carpeta)", lambda: self.abrir_explorador("historial")),
-            ("📈 Historial vivo (UI4)", self.launch_historial_vivo),
+            # UI4 (historial vivo) queda deshabilitado por ahora para que main.py
+            # funcione 100% en modo visual sin depender de una función externa.
+            # Cuando quieras volver a UI4, descomenta esta línea:
+            # ("📈 Historial vivo (UI4)", self.launch_historial_vivo),
             ("📁 Cargar receta JSON", self.select_recipe_file),
             ("🛠️ Crear receta (Builder)", self.launch_builder)
         ]
