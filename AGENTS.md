@@ -16,15 +16,19 @@ Python is 3.12. There is no web server, database, or shared build system.
 ### Environment / how deps are installed
 
 - Python dependencies live in a virtualenv at `.venv/` (created by the startup
-  update script from `requirements.txt`). Run everything with `.venv/bin/python`
-  (or activate with `source .venv/bin/activate`).
+  update script from `requirements.txt`, or locally with `setup_venv.bat` on
+  Windows / `setup_venv.sh` on Linux). Run everything with the venv Python:
+  - Windows: `.venv\Scripts\python.exe`
+  - Linux/macOS: `.venv/bin/python`
+- `.venv` is gitignored. Never copy a venv between Windows and Linux — recreate it.
+- Cursor/VS Code: select interpreter `.venv` (`Ctrl+Shift+P` → Python: Select
+  Interpreter). Settings live in `.vscode/settings.json` (Windows path).
 - The GUI (`PLC/main.py`, `PLC/builder.py`) uses PyQt6 and needs Qt system
   libraries (`libEGL`, `libxkbcommon`, the `libxcb-*` family, etc.). Those are
   OS packages baked into the environment image, not installed by the update
   script. `python3.12-venv` is likewise baked into the image.
 - `python-snap7` is intentionally **not** in `requirements.txt` (needs native
-  `libsnap7` + a real Siemens PLC). Hardware integration is currently disabled
-  in code.
+  `libsnap7` + a real Siemens PLC). Hardware integration may be disabled in code.
 
 ### Lint / test
 

@@ -59,27 +59,67 @@ Archivos de soporte:
 
 ## Cómo arrancar (desarrollo)
 
+### Windows (tu laptop)
+
+`.venv` **no se copia por Git** (está en `.gitignore`). Cada PC debe crear el suyo.
+
+1. En la raíz del repo, doble-clic o en PowerShell/CMD:
+   ```bat
+   setup_venv.bat
+   ```
+2. En Cursor/VS Code: `Ctrl+Shift+P` → **Python: Select Interpreter** → elige  
+   `.venv\Scripts\python.exe`
+3. Abre una **terminal nueva** (para que active el venv) y corre:
+   ```bat
+   cd PLC
+   python main.py
+   ```
+
+Si ves `ModuleNotFoundError: No module named 'PyQt6'` (u otra librería), casi siempre
+estás usando el Python del sistema en vez del `.venv`. Compruébalo:
+
+```bat
+where python
+python -c "import sys; print(sys.executable)"
+```
+
+Debe imprimir una ruta que contenga `.venv\Scripts\python.exe`. Si no, vuelve al paso 2
+o usa la ruta completa:
+
+```bat
+..\ .venv\Scripts\python.exe main.py
+```
+(sin el espacio: `..\.venv\Scripts\python.exe main.py`)
+
+### Linux / Cloud / macOS
+
 ```bash
 # Desde la raíz del repo
+./setup_venv.sh
+# o a mano:
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
-# Terminal 1 — cerebro 24/7
 cd PLC
 ../.venv/bin/python monitor_247.py
-
-# Terminal 2 — HMI (plan + luces)
-DISPLAY=:1 ../.venv/bin/python main.py          # en cloud / Linux con display
-# o simplemente:  ../.venv/bin/python main.py   # en Windows / escritorio local
-
-# Terminal 3 (opcional) — UI4 realidad CSV
-../.venv/bin/python historial_vivo.py
-
-# Terminal 4 (opcional) — builder de recetas
-../.venv/bin/python builder.py
+../.venv/bin/python main.py
+../.venv/bin/python historial_vivo.py   # opcional UI4
+../.venv/bin/python builder.py          # opcional UI1
 ```
 
 También puedes abrir Builder y UI4 desde el menú lateral de `main.py`.
+
+### Si `.venv` “no reconoce” las librerías
+
+Causas típicas:
+
+| Causa | Qué hacer |
+|---|---|
+| Cursor usa otro intérprete | `Python: Select Interpreter` → `.venv` |
+| Terminal vieja sin activar venv | Cierra la terminal y abre una nueva |
+| `.venv` creado en Linux y abierto en Windows (o al revés) | Bórralo y corre `setup_venv.bat` / `setup_venv.sh` otra vez |
+| Librerías no instaladas | `.venv\Scripts\pip install -r requirements.txt` |
+| Corres `python` global | Usa `.venv\Scripts\python.exe` explícitamente |
 
 **Nota actual:** en `main.py` la red UDP está comentada (“Modo Visual”), así que
 la GUI visualiza recetas localmente y aún no manda `start`/`stop` al monitor.
