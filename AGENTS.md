@@ -15,18 +15,16 @@ Python is 3.12. There is no web server, database, or shared build system.
 
 ### Environment / how deps are installed
 
-- Python dependencies live in a virtualenv at `.venv/` (created by the startup
-  update script from `requirements.txt`, or locally with `setup_venv.bat` on
-  Windows / `setup_venv.sh` on Linux). Run everything with the venv Python:
-  - Windows: `.venv\Scripts\python.exe`
-  - Linux/macOS: `.venv/bin/python`
-- `.venv` is gitignored. Never copy a venv between Windows and Linux — recreate it.
-- Cursor/VS Code: select interpreter `.venv` (`Ctrl+Shift+P` → Python: Select
-  Interpreter). Settings live in `.vscode/settings.json` (Windows path).
-- The GUI (`PLC/main.py`, `PLC/builder.py`) uses PyQt6 and needs Qt system
-  libraries (`libEGL`, `libxkbcommon`, the `libxcb-*` family, etc.). Those are
-  OS packages baked into the environment image, not installed by the update
-  script. `python3.12-venv` is likewise baked into the image.
+- **Preferred on the user's Windows laptop: no `.venv`.** Install deps into the
+  normal system/user Python with `install_deps.bat` or
+  `python -m pip install --user -r requirements.txt`, then run
+  `python PLC/main.py`.
+- Cloud Agents may still use a local `.venv/` for isolation; that folder is
+  gitignored and must never be committed or copied to Windows.
+- Cursor/VS Code: select a normal Python interpreter (**not** one inside `.venv`).
+  `.vscode/settings.json` does not force a venv.
+- The GUI (`PLC/main.py`, `PLC/builder.py`) uses PyQt6. On Linux cloud images,
+  Qt system libs (`libEGL`, `libxkbcommon`, `libxcb-*`, …) are baked in.
 - `python-snap7` is intentionally **not** in `requirements.txt` (needs native
   `libsnap7` + a real Siemens PLC). Hardware integration may be disabled in code.
 
