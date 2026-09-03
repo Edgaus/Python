@@ -1,76 +1,54 @@
 [
     {
-        "paso": 1,
-        "material": "Silicon Carbide Substrate",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 0.0,
-        "parametros_celdas": {}
+        "name": "Silicon Substrate",
+        "is_substrate": true,
+        "growth_time": 0.0,
+        "comment": "",
+        "element_data": {}
     },
     {
-        "paso": 2,
-        "material": "AlN",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 120.0,
-        "parametros_celdas": {
-            "Al": {
-                "mode": "Ciclo",
-                "t_shift": 3.0,
-                "t_open": 6.0,
-                "t_close": 6.0
-            },
-            "N": {
-                "mode": "Continuo"
-            }
-        }
-    },
-    {
-        "paso": 3,
-        "material": "AlN",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 60.0,
-        "parametros_celdas": {
-            "Al": {
-                "mode": "Continuo"
-            },
-            "N": {
-                "mode": "Continuo"
-            }
-        }
-    },
-    {
-        "paso": 4,
-        "material": "AlAs",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 60.0,
-        "parametros_celdas": {
-            "Al": {
+        "name": "GaAs",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "Ga": {
                 "mode": "Ciclo",
                 "t_shift": 2.0,
-                "t_open": 6.0,
-                "t_close": 6.0
+                "t_open": 8.0,
+                "t_close": 8.0
             },
             "As": {
-                "mode": "Ciclo",
-                "t_shift": 1.0,
-                "t_open": 6.0,
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
                 "t_close": 5.0
             }
         }
     },
     {
-        "paso": 5,
-        "material": "InGaN",
-        "comentario": "",
-        "tiempo_total_crecimiento_sec": 60.0,
-        "parametros_celdas": {
-            "In": {
-                "mode": "Continuo"
+        "name": "AlGaAs",
+        "is_substrate": false,
+        "growth_time": 60.0,
+        "comment": "",
+        "element_data": {
+            "Al": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             },
             "Ga": {
-                "mode": "Continuo"
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             },
-            "N": {
-                "mode": "Continuo"
+            "As": {
+                "mode": "Continuo",
+                "t_shift": 0.0,
+                "t_open": 5.0,
+                "t_close": 5.0
             }
         }
     }
