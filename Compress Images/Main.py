@@ -1,13 +1,15 @@
 import os
 from PIL import Image
 
-def compress_image(relative_input_path, reduction_percentage=50):
+def compress_image(relative_input_path, reduction_percentage=20, new_resolution=None):
     """
     Compresses an image by reducing its dimensions and optimizing its file size.
     
     :param relative_input_path: The path to the image relative to where this script is located.
     :param reduction_percentage: How much to reduce the image dimensions (0-99). 
                                  e.g., 50 means it scales down by 50%.
+    :param new_resolution: A tuple (width, height) to force a specific resolution. 
+                           If provided, this overrides reduction_percentage.
     """
     # 1. Resolve the absolute path based on the script's current directory
     input_path = os.path.abspath(relative_input_path)
@@ -39,10 +41,17 @@ def compress_image(relative_input_path, reduction_percentage=50):
     try:
         # 4. Open and process the image
         with Image.open(input_path) as img:
-            # Calculate new dimensions based on the reduction percentage
-            scale_factor = (100 - reduction_percentage) / 100.0
-            new_width = int(img.width * scale_factor)
-            new_height = int(img.height * scale_factor)
+            
+            # Determine new dimensions based on the provided parameters
+            if new_resolution:
+                new_width, new_height = new_resolution
+                print(f"Applying custom resolution: {new_width}x{new_height}")
+            else:
+                # Calculate new dimensions based on the reduction percentage
+                scale_factor = (100 - reduction_percentage) / 100.0
+                new_width = int(img.width * scale_factor)
+                new_height = int(img.height * scale_factor)
+                print(f"Applying {reduction_percentage}% reduction: {new_width}x{new_height}")
 
             # Resize the image using a high-quality downsampling filter
             resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
@@ -80,10 +89,14 @@ def compress_image(relative_input_path, reduction_percentage=50):
 # How to use the script
 # ==========================================
 if __name__ == "__main__":
-    image_file = "shutter.png" 
-    compression_amount = 50 
+    image_file = "NavierStokes.jpg" 
     
     # Use os.path.join to safely combine the folder and file name
     input_relative_path = os.path.join("Images", image_file)
     
-    compress_image(input_relative_path, reduction_percentage=compression_amount)
+    # OPCIÓN 1: Usar porcentaje de reducción (como estaba antes)
+    # compress_image(input_relative_path, reduction_percentage=50)
+
+    # OPCIÓN 2: Usar una resolución específica (Ancho, Alto)
+    # Esto forzará la imagen a ser de 800x600 píxeles, ignorando el porcentaje
+    compress_image(input_relative_path, new_resolution=(2000, 700))
